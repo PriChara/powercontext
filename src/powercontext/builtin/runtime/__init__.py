@@ -98,6 +98,14 @@ from powercontext.builtin.runtime.config import (
     InferenceConfig,
     RuntimeConfig,
 )
+from powercontext.builtin.runtime.context_pack import (
+    CONTEXT_PACK_DELTA_SCHEMA,
+    CONTEXT_PACK_SCHEMA,
+    ContextPack,
+    ContextPackDelta,
+    ContextPackError,
+    apply_context_pack_delta,
+)
 from powercontext.builtin.runtime.decision_model import (
     DecisionKind,
     DecisionModel,
@@ -181,6 +189,12 @@ from powercontext.builtin.runtime.readiness import (
     RuntimeReadinessChecks,
     RuntimeReadinessStatus,
     dependency_readiness_probe,
+)
+from powercontext.builtin.runtime.source_lifecycle import (
+    ScopedSourceLifecycleService,
+    SourceLifecycleApplication,
+    SourceLifecycleError,
+    SourceLifecycleEvent,
 )
 from powercontext.builtin.statistics import (
     ArtifactInventoryStatistics,
@@ -366,6 +380,9 @@ __all__ = [
     "SkillGenerationOrigin",
     "SourceApplication",
     "SourceInventoryStatistics",
+    "SourceLifecycleApplication",
+    "SourceLifecycleError",
+    "SourceLifecycleEvent",
     "SourceReceipt",
     "SpawnArtifactProcessingWorkerLauncher",
     "Statistics",

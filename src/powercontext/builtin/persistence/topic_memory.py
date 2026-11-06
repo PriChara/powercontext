@@ -54,6 +54,7 @@ from powercontext.builtin.persistence.supervision import database_utc_now
 from powercontext.builtin.persistence.tables import (
     ARTIFACT_HEADS_TABLE,
     ARTIFACTS_TABLE,
+    SOURCE_LIFECYCLE_NODES_TABLE,
     TOPIC_MEMORY_ACTIVE_CHUNKS_TABLE,
     TOPIC_MEMORY_ACTIVE_TOPICS_TABLE,
     TOPIC_MEMORY_RETRIEVAL_SHAPE_TABLE,
@@ -487,6 +488,42 @@ class TopicMemoryRepository:
             admission=admission,
         )
         channels = await self.index.search(connection, scope_id, request)
+        try:
+            inactive_topic_ids = frozenset(
+                str(value)
+                for value in (
+                    await connection.execute(
+                        select(SOURCE_LIFECYCLE_NODES_TABLE.c.target_id).where(
+                            SOURCE_LIFECYCLE_NODES_TABLE.c.scope_id == scope_id,
+                            SOURCE_LIFECYCLE_NODES_TABLE.c.node_kind == "topic",
+                            SOURCE_LIFECYCLE_NODES_TABLE.c.available.is_(False),
+                        )
+                    )
+                ).scalars()
+            )
+        except Exception:
+            inactive_topic_ids = frozenset()
+        if inactive_topic_ids:
+            channels = channels.model_copy(
+                update={
+                    "topic_fts": tuple(
+                        item for item in channels.topic_fts if item.artifact_ref.artifact_id not in inactive_topic_ids
+                    ),
+                    "detail_fts": tuple(
+                        item for item in channels.detail_fts if item.artifact_ref.artifact_id not in inactive_topic_ids
+                    ),
+                    "topic_vector": tuple(
+                        item
+                        for item in channels.topic_vector
+                        if item.artifact_ref.artifact_id not in inactive_topic_ids
+                    ),
+                    "detail_vector": tuple(
+                        item
+                        for item in channels.detail_vector
+                        if item.artifact_ref.artifact_id not in inactive_topic_ids
+                    ),
+                }
+            )
         await self._check_retrieval_shape(connection)
         outcome = _fuse_topic_memory_rankings(query, channels, limit, mode=used_mode, admission=admission)
         return TopicMemorySearchResult(

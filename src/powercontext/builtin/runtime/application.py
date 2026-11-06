@@ -166,6 +166,11 @@ from powercontext.builtin.runtime._scope_cache import (
     ScopeCacheObserver,
     ScopeEvictor,
 )
+from powercontext.builtin.runtime.context_pack import (
+    ContextPack,
+    ContextPackDelta,
+    ContextPackError,
+)
 from powercontext.builtin.runtime.decision_model import DecisionModel
 from powercontext.builtin.runtime.errors import InvalidRuntimeRequestError, TopicMemoryProcessingUnavailableError
 from powercontext.builtin.runtime.models import (
@@ -247,6 +252,10 @@ from powercontext.builtin.runtime.recall_sufficiency import (
     RecallSufficiencyPolicy,
     build_recall_candidates,
     recall_effort,
+)
+from powercontext.builtin.runtime.source_lifecycle import (
+    ScopedSourceLifecycleService,
+    SourceLifecycleApplication,
 )
 from powercontext.builtin.runtime.statistics import RelationalScopedStatistics, overview_selection
 from powercontext.builtin.scope import ScopeApplication, ScopeDescriptor, ScopeSelection
@@ -846,6 +855,23 @@ class ScopedContextApplication:
             if authorize_scopes is not None:
                 await authorize_scopes((self.scope_id, *scope.context_references))
             return await self._prepare(request, scope)
+
+    async def prepare_incremental(
+        self,
+        request: PrepareContextRequest,
+        base_pack: ContextPack | None = None,
+        *,
+        authorize_scopes: Callable[[tuple[str, ...]], Awaitable[None]] | None = None,
+    ) -> ContextPack | ContextPackDelta:
+        if base_pack is not None:
+            if not isinstance(base_pack, ContextPack):
+                raise ContextPackError("base_pack must be a ContextPack or None")
+            ContextPack.from_bytes(base_pack.to_bytes())
+        prepared = await self.prepare(request, authorize_scopes=authorize_scopes)
+        target_pack = ContextPack.from_content(prepared.content)
+        if base_pack is None:
+            return target_pack
+        return ContextPackDelta.between(base_pack, target_pack)
 
     async def _prepare(self, request: PrepareContextRequest, scope: ScopeDescriptor, /) -> PreparedContext:
         build, effort = await self._prepare_build(request, scope)
@@ -3100,6 +3126,7 @@ class BuiltinRuntime:
         self._scheduler: AsyncIOScheduler | None = None
         self._scheduler_runtime_key: str | None = None
         self.sources = SourceApplication(self)
+        self.lifecycle = SourceLifecycleApplication(self)
         self.ingestion = RemoteIngestionApplication(self, remote_ingestion)
         self.code = CodeApplication(self, code_service or CodeService(CodeConfig()))
         self.context = ContextApplication(self)

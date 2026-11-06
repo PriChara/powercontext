@@ -317,6 +317,7 @@ class _ScopedServices:
     prompts: PromptService
     generation_receipts: HandoffGenerationReceipts
     model_usage: _ModelUsageRecorder
+    memory_source_count_threshold: int | None = None
 
     def generation_sources(self) -> GenerationSourceAccess:
         return GenerationSourceAccess(self.repositories.sources)
@@ -547,6 +548,8 @@ class RelationalContexts:
         model_usage_queue_capacity: int = 256,
         model_usage_write_timeout_seconds: float = 1.0,
         model_usage_flush_timeout_seconds: float = 0.5,
+        memory_source_count_threshold: int | None = None,
+        topic_memory_source_count_threshold: int | None = None,
     ) -> None:
         self.database = database
         self.scopes = ScopeApplication(database, cursor_secret=cursor_secret)
@@ -554,7 +557,13 @@ class RelationalContexts:
         self.index = NoMemoryIndex() if index is None else index
         self.topic_memory_index = NoTopicMemoryIndex() if topic_memory_index is None else topic_memory_index
         self.experience_index = NoExperienceIndex() if experience_index is None else experience_index
-        source_repository = SourceRepository(self.source_registry)
+        source_repository = SourceRepository(
+            self.source_registry,
+            count_thresholds={
+                SOURCE_WINDOW_TRIGGER_NAME: memory_source_count_threshold,
+                TOPIC_MEMORY_SOURCE_WINDOW_BINDING: topic_memory_source_count_threshold,
+            },
+        )
         artifact_repository = ArtifactRepository(
             (Handoff, Memory, Experience, Skill, Profile, Prompt, TopicMemory),
             sources=source_repository,
@@ -702,6 +711,7 @@ class RelationalContexts:
         self._memory_max_history_revisions = memory_max_history_revisions
         self._handoff_artifact_id = handoff_artifact_id
         self._memory_artifact_id = memory_artifact_id
+        self._memory_source_count_threshold = memory_source_count_threshold
         self._tracing = tracing
         self._contexts: dict[
             str,
@@ -1451,6 +1461,7 @@ class RelationalContexts:
             token_estimator=self._token_estimator,
             source_registry=self.source_registry,
             model_usage=self._model_usage,
+            memory_source_count_threshold=self._memory_source_count_threshold,
         )
 
 
@@ -1748,8 +1759,29 @@ class _RelationalTriggers:
                     if on_commit is not None and prepared is not None:
                         before = prepared.result if prepared.commit is None else prepared.commit.base
                         await on_commit(connection, before, updated)
+                    current_high = await self._services.repositories.sources.journal_position(
+                        connection,
+                        self._services.scope_id,
+                    )
+                    remaining = current_high - action.through
                     if processing is not None:
-                        await processing.complete(connection, remaining_work=action.through < high_watermark)
+                        await processing.complete(connection, remaining_work=remaining > 0)
+                    threshold = self._services.memory_source_count_threshold
+                    if threshold is not None and remaining >= threshold:
+                        intents = ArtifactProcessingIntentRepository()
+                        intent = await intents.load(
+                            connection,
+                            self._services.scope_id,
+                            SOURCE_WINDOW_TRIGGER_NAME,
+                            for_update=True,
+                        )
+                        if intent is None or intent.requested_generation <= intent.handled_generation:
+                            await intents.request(
+                                connection,
+                                self._services.scope_id,
+                                SOURCE_WINDOW_TRIGGER_NAME,
+                            )
+                            connection.info.setdefault("wake_bindings", set()).add(SOURCE_WINDOW_TRIGGER_NAME)
             return MemoryFlushResult(
                 previous_cursor=action.after,
                 high_watermark=high_watermark,

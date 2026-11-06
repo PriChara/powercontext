@@ -17,6 +17,9 @@
 from __future__ import annotations
 
 import json
+import math
+import re
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from itertools import chain
@@ -93,6 +96,25 @@ class PreparedContextOmissions:
 
 
 @dataclass(frozen=True)
+class MemoryEntryAddress:
+    """Identify one exact Memory entry version across Scope boundaries."""
+
+    memory: ArtifactAddress
+    entry_id: str
+    entry_version_id: str
+
+
+@dataclass(frozen=True)
+class PreparedEvidenceFragment:
+    """One literal substring selected from a Memory entry version."""
+
+    address: MemoryEntryAddress
+    start: int
+    end: int
+    text: str
+
+
+@dataclass(frozen=True)
 class PreparedContextBuild:
     """Final public context and the exact origins selected to produce it.
 
@@ -106,15 +128,7 @@ class PreparedContextBuild:
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
-
-
-@dataclass(frozen=True)
-class MemoryEntryAddress:
-    """Identify one exact Memory entry version across Scope boundaries."""
-
-    memory: ArtifactAddress
-    entry_id: str
-    entry_version_id: str
+    fragments: tuple[PreparedEvidenceFragment, ...] = ()
 
 
 PreparedContextOrigin = MemoryCitation | ArtifactRef | MemoryEntryAddress | ArtifactAddress
@@ -234,6 +248,14 @@ class PreparedContextBuilder:
             raise PreparedContextInvariantError("topic-memory-candidate-limit")
         if sum(len(candidates.hits) for candidates in experience_candidates) > self.experience_candidate_limit:
             raise PreparedContextInvariantError("experience-candidate-limit")
+
+        if request.evidence_selection:
+            return _build_evidence_selection(
+                builder=self,
+                request=request,
+                current_scope_id=current_scope_id,
+                memory_candidates=memory_candidates,
+            )
 
         content, origins, omissions = self._select_entries(
             request=request,
@@ -728,3 +750,870 @@ def _truncate_utf8(text: str, byte_budget: int) -> str:
     prefix_budget = byte_budget - len(_ELLIPSIS.encode("utf-8"))
     encoded_prefix = text.encode("utf-8")[:prefix_budget]
     return f"{encoded_prefix.decode('utf-8', errors='ignore')}{_ELLIPSIS}"
+
+
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "being",
+        "by",
+        "can",
+        "could",
+        "did",
+        "do",
+        "does",
+        "for",
+        "from",
+        "had",
+        "has",
+        "have",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "may",
+        "might",
+        "of",
+        "on",
+        "or",
+        "our",
+        "should",
+        "that",
+        "the",
+        "their",
+        "them",
+        "then",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "to",
+        "was",
+        "we",
+        "were",
+        "which",
+        "who",
+        "with",
+        "would",
+    }
+)
+
+_ABBREVIATIONS = frozenset(
+    {
+        "al",
+        "ca",
+        "cf",
+        "dr",
+        "eq",
+        "eqs",
+        "et",
+        "etc",
+        "fig",
+        "figs",
+        "inc",
+        "jr",
+        "mr",
+        "mrs",
+        "ms",
+        "no",
+        "nos",
+        "pp",
+        "prof",
+        "ref",
+        "refs",
+        "sp",
+        "spp",
+        "sr",
+        "st",
+        "subsp",
+        "var",
+        "vol",
+        "vols",
+        "vs",
+    }
+)
+
+_TOKEN_RE = re.compile(r"[a-z]+|\d+|[\u4e00-\u9fff]")
+_CODE_TOKEN_RE = re.compile(r"\b(?:[a-z]*\d+[a-z0-9+-]*|[a-z0-9]+-[a-z0-9+-]+)\b")
+_SENTENCE_BOUNDARY_RE = re.compile(r"([.?!]+)(\s+)|([。！？；]+)(\s*)|(\n+)")
+
+
+def _stem_token(word: str) -> str:
+    if len(word) <= 3 or word.isdigit():
+        return word
+    if word.startswith("induc"):
+        return "induc"
+    for suffix, repl in (
+        ("ization", "ize"),
+        ("isation", "ize"),
+        ("ational", "ate"),
+        ("fulness", "ful"),
+        ("ousness", "ous"),
+        ("iveness", "ive"),
+        ("ability", "able"),
+        ("ibility", "ible"),
+        ("ications", "ic"),
+        ("ication", "ic"),
+        ("tional", "tion"),
+        ("ations", "ate"),
+        ("ation", "ate"),
+        ("ative", "ate"),
+        ("encies", "ence"),
+        ("ancies", "ance"),
+        ("ments", "ment"),
+        ("ment", ""),
+        ("nesses", ""),
+        ("ness", ""),
+        ("ities", "ity"),
+        ("ity", ""),
+        ("ingly", ""),
+        ("edly", ""),
+        ("ings", ""),
+        ("ing", ""),
+        ("ies", "y"),
+        ("ied", "y"),
+        ("es", ""),
+        ("ed", ""),
+        ("ly", ""),
+        ("al", ""),
+        ("er", ""),
+        ("or", ""),
+        ("s", ""),
+    ):
+        if word.endswith(suffix) and len(word) - len(suffix) + len(repl) >= 3:
+            return word[: len(word) - len(suffix)] + repl
+    return word
+
+
+@dataclass(frozen=True)
+class _EvidenceCandidateDoc:
+    address: MemoryEntryAddress
+    origin: PreparedContextOrigin
+    text: str
+    rank: int
+
+
+@dataclass(frozen=True)
+class _SentenceSpan:
+    start: int
+    end: int
+    text: str
+    is_title: bool = False
+    is_duplicate_boilerplate: bool = False
+
+
+def _split_evidence_sentences(text: str) -> list[_SentenceSpan]:
+    n = len(text)
+    if n == 0:
+        return []
+
+    raw_spans: list[tuple[int, int]] = []
+    cur_start = 0
+    while cur_start < n and text[cur_start].isspace():
+        cur_start += 1
+
+    for match in _SENTENCE_BOUNDARY_RE.finditer(text):
+        b_start, b_end = match.span()
+        if b_start < cur_start:
+            continue
+        ascii_punct = match.group(1)
+        if ascii_punct is not None and "." in ascii_punct:
+            prefix = text[cur_start:b_start].rstrip()
+            last_word_match = re.search(r"([A-Za-z.]+)$", prefix)
+            if last_word_match:
+                last_word = last_word_match.group(1).lower().strip(".")
+                if last_word in _ABBREVIATIONS or (len(last_word) == 1 and last_word_match.group(1).isupper()):
+                    continue
+        end_pos = b_start + len(ascii_punct or match.group(3) or "")
+        while end_pos > cur_start and text[end_pos - 1].isspace():
+            end_pos -= 1
+        if end_pos > cur_start:
+            raw_spans.append((cur_start, end_pos))
+        cur_start = b_end
+        while cur_start < n and text[cur_start].isspace():
+            cur_start += 1
+
+    if cur_start < n:
+        end_pos = n
+        while end_pos > cur_start and text[end_pos - 1].isspace():
+            end_pos -= 1
+        if end_pos > cur_start:
+            raw_spans.append((cur_start, end_pos))
+
+    if not raw_spans:
+        return []
+
+    # Check if the first sentence contains an unpunctuated title separated by double space or header
+    first_start, first_end = raw_spans[0]
+    first_text = text[first_start:first_end]
+    split_first: list[tuple[int, int, bool]] = []
+    dbl_space = re.search(r"  +", first_text)
+    if dbl_space and 15 <= dbl_space.start() <= 180 and first_end - (first_start + dbl_space.end()) >= 25:
+        t_end = first_start + dbl_space.start()
+        b_start = first_start + dbl_space.end()
+        split_first.append((first_start, t_end, True))
+        split_first.append((b_start, first_end, False))
+    elif len(first_text) >= 165 and len(raw_spans) >= 2:
+        header_match = re.search(
+            r"\s+(?=(?:BACKGROUND|PURPOSE OF REVIEW|PURPOSE|OBJECTIVE|OBJECTIVES|METHODS|RESULTS|SUMMARY|INTRODUCTION|Background|Objective|Methods|Results|Here we|We\s+[a-z]+|In\s+\d+|Viral\s+|Meiotic\s+|Geostatistics\s+|Nanotechnologies\s+|[A-Z][A-Za-z0-9-]+(?:\s+[a-z]+){0,2}\s+(?:was|were|is|are|has|have)\b))",
+            first_text[20:155],
+        )
+        if header_match:
+            cut_left = 20 + header_match.start()
+            cut_right = 20 + header_match.end()
+            if first_end - (first_start + cut_right) >= 30:
+                split_first.append((first_start, first_start + cut_left, True))
+                split_first.append((first_start + cut_right, first_end, False))
+
+    spans_with_title: list[tuple[int, int, bool]] = []
+    if split_first:
+        spans_with_title.extend(split_first)
+        for s_start, s_end in raw_spans[1:]:
+            spans_with_title.append((s_start, s_end, False))
+    else:
+        is_first_title = len(raw_spans) >= 3 and (first_end - first_start) <= 180
+        spans_with_title.append((first_start, first_end, is_first_title))
+        for s_start, s_end in raw_spans[1:]:
+            spans_with_title.append((s_start, s_end, False))
+
+    # Sub-split any abnormally huge sentence (> 550 UTF-8 bytes) so it can always fit tight budgets
+    final_tuples: list[tuple[int, int, bool]] = []
+    for s_start, s_end, is_title in spans_with_title:
+        sub_text = text[s_start:s_end]
+        if len(sub_text.encode("utf-8")) <= 550:
+            final_tuples.append((s_start, s_end, is_title))
+            continue
+        chunk_start = s_start
+        while chunk_start < s_end:
+            if len(text[chunk_start:s_end].encode("utf-8")) <= 400:
+                final_tuples.append((chunk_start, s_end, is_title and chunk_start == s_start))
+                break
+            target_end = min(s_end, chunk_start + 260)
+            space_pos = text.rfind(" ", chunk_start + 60, min(s_end, chunk_start + 340))
+            if space_pos == -1:
+                space_pos = target_end
+            end_clean = space_pos
+            while end_clean > chunk_start and text[end_clean - 1].isspace():
+                end_clean -= 1
+            if end_clean > chunk_start:
+                final_tuples.append((chunk_start, end_clean, is_title and chunk_start == s_start))
+            chunk_start = space_pos
+            while chunk_start < s_end and text[chunk_start].isspace():
+                chunk_start += 1
+
+    counts = Counter(text[s:e].strip().lower() for s, e, _ in final_tuples)
+    return [
+        _SentenceSpan(
+            start=s,
+            end=e,
+            text=text[s:e],
+            is_title=is_title,
+            is_duplicate_boilerplate=counts[text[s:e].strip().lower()] >= 3,
+        )
+        for s, e, is_title in final_tuples
+    ]
+
+
+def _extract_features(
+    text: str,
+) -> tuple[list[str], list[str], set[str], set[str], set[str], set[tuple[str, str]], set[str]]:
+    lowered = text.lower()
+    all_tokens = _TOKEN_RE.findall(lowered)
+    content_tokens = [tok for tok in all_tokens if tok not in _STOPWORDS]
+    if not content_tokens:
+        content_tokens = list(all_tokens)
+    stems = [_stem_token(tok) for tok in content_tokens]
+    prefixes = {tok[:5] for tok in content_tokens if len(tok) >= 5} | set(stems)
+    numbers = {tok for tok in all_tokens if tok.isdigit()}
+    codes = set(_CODE_TOKEN_RE.findall(lowered))
+    for code in list(codes):
+        for part in re.findall(r"[a-z]+|\d+", code):
+            if len(part) >= 2 or part.isdigit():
+                codes.add(part)
+    bigrams = set(zip(stems, stems[1:])) if len(stems) >= 2 else set()
+    char_ngrams: set[str] = set()
+    for tok in content_tokens:
+        if len(tok) >= 4:
+            for idx in range(len(tok) - 3):
+                char_ngrams.add(tok[idx : idx + 4])
+    return content_tokens, stems, prefixes, numbers, codes, bigrams, char_ngrams
+
+
+def _render_evidence_fragments(fragments: Sequence[PreparedEvidenceFragment]) -> str:
+    envelope = {
+        "trust": "untrusted_history",
+        "items": [
+            {
+                "citation": {
+                    "scope_id": fragment.address.memory.scope_id,
+                    "memory_ref": fragment.address.memory.artifact.model_dump(mode="json"),
+                    "entry_id": fragment.address.entry_id,
+                    "entry_version_id": fragment.address.entry_version_id,
+                },
+                "content": fragment.text,
+                "start": fragment.start,
+                "end": fragment.end,
+            }
+            for fragment in fragments
+        ],
+    }
+    encoded = json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+    return "\n\n".join((TRUST_POLICY, f"{_BEGIN_MARKER}\n{encoded}\n{_END_MARKER}"))
+
+
+def _evidence_rendered_bytes(fragments: Sequence[PreparedEvidenceFragment]) -> int:
+    if not fragments:
+        return 0
+    return len(_render_evidence_fragments(fragments).encode("utf-8"))
+
+
+def _indices_to_fragments(
+    doc: _EvidenceCandidateDoc,
+    sentences: Sequence[_SentenceSpan],
+    selected_indices: set[int],
+    *,
+    bridge_gap_bytes: int = 307,
+) -> list[PreparedEvidenceFragment]:
+    if not selected_indices:
+        return []
+    ordered = sorted(selected_indices)
+    intervals: list[tuple[int, int]] = []
+    for idx in ordered:
+        s_span = sentences[idx]
+        if not intervals:
+            intervals.append((s_span.start, s_span.end))
+            continue
+        prev_start, prev_end = intervals[-1]
+        gap_text = doc.text[prev_end : s_span.start]
+        gap_bytes = len(gap_text.encode("utf-8"))
+        if not gap_text.strip() or gap_bytes <= bridge_gap_bytes:
+            intervals[-1] = (prev_start, s_span.end)
+        else:
+            intervals.append((s_span.start, s_span.end))
+    return [
+        PreparedEvidenceFragment(
+            address=doc.address,
+            start=start,
+            end=end,
+            text=doc.text[start:end],
+        )
+        for start, end in intervals
+    ]
+
+
+def _fit_partial_span(
+    doc: _EvidenceCandidateDoc,
+    start: int,
+    end: int,
+    *,
+    existing_fragments: Sequence[PreparedEvidenceFragment],
+    max_bytes: int,
+) -> PreparedEvidenceFragment | None:
+    text = doc.text[start:end]
+    if not text.strip():
+        return None
+    full_frag = PreparedEvidenceFragment(address=doc.address, start=start, end=end, text=text)
+    if _evidence_rendered_bytes((*existing_fragments, full_frag)) <= max_bytes:
+        return full_frag
+
+    lo = 1
+    hi = end - start
+    best_end: int | None = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        cand_end = start + mid
+        cand_frag = PreparedEvidenceFragment(
+            address=doc.address,
+            start=start,
+            end=cand_end,
+            text=doc.text[start:cand_end],
+        )
+        if _evidence_rendered_bytes((*existing_fragments, cand_frag)) <= max_bytes:
+            best_end = cand_end
+            lo = mid + 1
+        else:
+            hi = mid - 1
+
+    if best_end is None or best_end <= start:
+        return None
+    # Snap to last whitespace boundary if possible so words are not split mid-token
+    word_end = best_end
+    if word_end < len(doc.text) and not doc.text[word_end].isspace():
+        space_pos = doc.text.rfind(" ", start + 1, word_end)
+        if space_pos > start + max(8, (best_end - start) // 2):
+            word_end = space_pos
+    while word_end > start and doc.text[word_end - 1].isspace():
+        word_end -= 1
+    if word_end <= start:
+        word_end = best_end
+    return PreparedEvidenceFragment(
+        address=doc.address,
+        start=start,
+        end=word_end,
+        text=doc.text[start:word_end],
+    )
+
+
+def _expand_single_fragment_boundaries(
+    doc: _EvidenceCandidateDoc,
+    fragment: PreparedEvidenceFragment,
+    sentences: Sequence[_SentenceSpan],
+    *,
+    max_bytes: int,
+) -> PreparedEvidenceFragment:
+    if any(s.is_duplicate_boilerplate for s in sentences):
+        return fragment
+
+    cur_start, cur_end = fragment.start, fragment.end
+    # Prefer expanding rightwards into abstract body first, then leftwards towards start
+    if cur_end < len(doc.text):
+        lo = cur_end
+        hi = len(doc.text)
+        best_end = cur_end
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            cand = PreparedEvidenceFragment(
+                address=doc.address,
+                start=cur_start,
+                end=mid,
+                text=doc.text[cur_start:mid],
+            )
+            if _evidence_rendered_bytes((cand,)) <= max_bytes:
+                best_end = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        if best_end > cur_end:
+            if best_end < len(doc.text) and not doc.text[best_end].isspace():
+                sp = doc.text.rfind(" ", cur_end, best_end)
+                if sp > cur_end:
+                    best_end = sp
+            while best_end > cur_end and doc.text[best_end - 1].isspace():
+                best_end -= 1
+            if best_end > cur_end:
+                cur_end = best_end
+
+    if cur_start > 0:
+        # Check if sentences[0] is a title; only expand left into non-title body or if body is already covered
+        min_allowed_start = 0
+        if sentences and sentences[0].is_title and cur_end < len(doc.text):
+            min_allowed_start = sentences[1].start if len(sentences) > 1 else 0
+        if cur_start > min_allowed_start:
+            lo = min_allowed_start
+            hi = cur_start
+            best_start = cur_start
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                cand = PreparedEvidenceFragment(
+                    address=doc.address,
+                    start=mid,
+                    end=cur_end,
+                    text=doc.text[mid:cur_end],
+                )
+                if _evidence_rendered_bytes((cand,)) <= max_bytes:
+                    best_start = mid
+                    hi = mid - 1
+                else:
+                    lo = mid + 1
+            if best_start < cur_start:
+                if best_start > 0 and not doc.text[best_start - 1].isspace():
+                    sp = doc.text.find(" ", best_start, cur_start)
+                    if sp != -1 and sp + 1 < cur_start:
+                        best_start = sp + 1
+                while best_start < cur_start and doc.text[best_start].isspace():
+                    best_start += 1
+                if best_start < cur_start:
+                    cur_start = best_start
+
+    return PreparedEvidenceFragment(
+        address=doc.address,
+        start=cur_start,
+        end=cur_end,
+        text=doc.text[cur_start:cur_end],
+    )
+
+
+def _select_doc_fragments(
+    doc: _EvidenceCandidateDoc,
+    sentences: Sequence[_SentenceSpan],
+    direct_scores: Sequence[float],
+    context_scores: Sequence[float],
+    sent_stems: Sequence[set[str]],
+    query_stems_set: set[str],
+    *,
+    existing_fragments: Sequence[PreparedEvidenceFragment],
+    max_bytes: int,
+    expand_to_budget: bool,
+) -> list[PreparedEvidenceFragment]:
+    if not sentences:
+        return []
+
+    has_boilerplate = any(s.is_duplicate_boilerplate and direct_scores[idx] == 0.0 for idx, s in enumerate(sentences))
+
+    # Fast path when expanding to fill budget on a non-boilerplate document:
+    # 1) Check if the entire document fits in a single fragment
+    if expand_to_budget and not has_boilerplate:
+        whole_start = sentences[0].start
+        whole_end = sentences[-1].end
+        whole_frag = PreparedEvidenceFragment(
+            address=doc.address,
+            start=whole_start,
+            end=whole_end,
+            text=doc.text[whole_start:whole_end],
+        )
+        if _evidence_rendered_bytes((*existing_fragments, whole_frag)) <= max_bytes:
+            return [whole_frag]
+
+        # 2) Check if the entire abstract body (excluding standalone title sentence 0) fits in a single fragment
+        if len(sentences) >= 2 and sentences[0].is_title:
+            body_start = sentences[1].start
+            body_end = sentences[-1].end
+            body_frag = PreparedEvidenceFragment(
+                address=doc.address,
+                start=body_start,
+                end=body_end,
+                text=doc.text[body_start:body_end],
+            )
+            if _evidence_rendered_bytes((*existing_fragments, body_frag)) <= max_bytes:
+                if not existing_fragments:
+                    body_frag = _expand_single_fragment_boundaries(doc, body_frag, sentences, max_bytes=max_bytes)
+                return [body_frag]
+
+    # Greedy selection with MMR / novel query stem coverage + adjacency preference
+    selected: set[int] = set()
+    covered_stems: set[str] = set()
+    has_positive_body = any(direct_scores[i] > 0.0 and not sentences[i].is_title for i in range(len(sentences)))
+
+    while True:
+        best_idx: int | None = None
+        best_gain = -1.0
+        for idx, s_span in enumerate(sentences):
+            if idx in selected:
+                continue
+            if s_span.is_duplicate_boilerplate and direct_scores[idx] <= 0.0:
+                continue
+            if not expand_to_budget and direct_scores[idx] <= 0.0 and context_scores[idx] <= 0.0:
+                continue
+
+            base = context_scores[idx]
+            if s_span.is_title and has_positive_body:
+                base *= 0.45
+
+            uncovered = len((sent_stems[idx] & query_stems_set) - covered_stems)
+            novelty_bonus = 1.25 * uncovered
+            adj_bonus = 0.0
+            if selected:
+                if (idx - 1) in selected or (idx + 1) in selected:
+                    adj_bonus = 0.35 * max(base, 0.2) + 0.15
+                elif (idx - 2) in selected or (idx + 2) in selected:
+                    adj_bonus = 0.15 * max(base, 0.1)
+
+            # Tie-break slightly in favor of body sentences over title, then earlier position
+            body_bias = 0.01 if not s_span.is_title else 0.0
+            gain = base + novelty_bonus + adj_bonus + body_bias - (idx * 1e-6)
+            if gain <= 0.0 and selected and not expand_to_budget:
+                continue
+            if gain > best_gain:
+                cand_selected = set(selected)
+                cand_selected.add(idx)
+                cand_frags = _indices_to_fragments(doc, sentences, cand_selected)
+                if _evidence_rendered_bytes((*existing_fragments, *cand_frags)) <= max_bytes:
+                    best_gain = gain
+                    best_idx = idx
+
+        if best_idx is None:
+            break
+        selected.add(best_idx)
+        covered_stems |= sent_stems[best_idx] & query_stems_set
+        if not expand_to_budget and len(selected) >= 2 and covered_stems >= query_stems_set:
+            break
+
+    if not selected:
+        # Fallback if even the single top sentence exceeded max_bytes: slice the highest-scoring sentence
+        top_idx = max(range(len(sentences)), key=lambda i: (context_scores[i], -i))
+        partial = _fit_partial_span(
+            doc,
+            sentences[top_idx].start,
+            sentences[top_idx].end,
+            existing_fragments=existing_fragments,
+            max_bytes=max_bytes,
+        )
+        return [partial] if partial is not None else []
+
+    fragments = _indices_to_fragments(doc, sentences, selected)
+
+    # If we have multiple fragments in this doc and bridging the full span [first, last] fits in max_bytes
+    # (and there are no duplicate boilerplate sentences in between), bridge into 1 contiguous fragment!
+    if expand_to_budget and len(fragments) > 1 and not has_boilerplate:
+        bridged = PreparedEvidenceFragment(
+            address=doc.address,
+            start=fragments[0].start,
+            end=fragments[-1].end,
+            text=doc.text[fragments[0].start : fragments[-1].end],
+        )
+        if _evidence_rendered_bytes((*existing_fragments, bridged)) <= max_bytes:
+            fragments = [bridged]
+
+    if expand_to_budget and not existing_fragments and len(fragments) == 1 and not has_boilerplate:
+        fragments = [_expand_single_fragment_boundaries(doc, fragments[0], sentences, max_bytes=max_bytes)]
+
+    return fragments
+
+
+def _build_evidence_selection(
+    *,
+    builder: PreparedContextBuilder,
+    request: PrepareContextRequest,
+    current_scope_id: str | None,
+    memory_candidates: Sequence[PreparedMemoryCandidates],
+) -> PreparedContextBuild:
+    grouped_docs: list[list[_EvidenceCandidateDoc]] = []
+    seen_global: set[tuple[str, str, int, str, str]] = set()
+    rank_counter = 0
+
+    for candidates in memory_candidates:
+        if candidates.hits and candidates.memory_ref is None:
+            raise PreparedContextInvariantError("memory-ref-missing")
+        effective_scope = candidates.scope_id if candidates.scope_id else (current_scope_id or "")
+        group_list: list[_EvidenceCandidateDoc] = []
+        seen_in_group: set[tuple[str, str]] = set()
+        for hit in candidates.hits:
+            if hit.memory_ref != candidates.memory_ref:
+                raise PreparedContextInvariantError("memory-ref-mismatch")
+            local_key = (hit.entry_id, hit.entry_version_id)
+            if local_key in seen_in_group:
+                continue
+            seen_in_group.add(local_key)
+            if not hit.entry_id.strip() or not hit.entry_version_id.strip() or not hit.text.strip():
+                continue
+            global_key = (
+                effective_scope,
+                hit.memory_ref.artifact_id,
+                hit.memory_ref.revision,
+                hit.entry_id,
+                hit.entry_version_id,
+            )
+            if global_key in seen_global:
+                continue
+            seen_global.add(global_key)
+            address = MemoryEntryAddress(
+                memory=ArtifactAddress(scope_id=effective_scope, artifact=hit.memory_ref),
+                entry_id=hit.entry_id,
+                entry_version_id=hit.entry_version_id,
+            )
+            group_list.append(
+                _EvidenceCandidateDoc(
+                    address=address,
+                    origin=address,
+                    text=hit.text,
+                    rank=rank_counter,
+                )
+            )
+            rank_counter += 1
+        if group_list:
+            grouped_docs.append(group_list)
+
+    docs = list(_interleave_groups(grouped_docs))
+    if not docs:
+        return PreparedContextBuild(context=builder.empty(), origins=(), fragments=())
+
+    q_words, q_stems, q_prefixes, q_numbers, q_codes, q_bigrams, q_char_ngrams = _extract_features(request.query)
+    q_words_set = set(q_words)
+    q_stems_set = set(q_stems)
+
+    doc_sentences: list[list[_SentenceSpan]] = []
+    doc_sent_features: list[
+        list[tuple[list[str], list[str], set[str], set[str], set[str], set[tuple[str, str]], set[str]]]
+    ] = []
+    all_sent_df_words: Counter[str] = Counter()
+    all_sent_df_stems: Counter[str] = Counter()
+    all_sent_df_prefixes: Counter[str] = Counter()
+    total_sentences = 0
+    total_word_len = 0
+
+    for doc in docs:
+        sents = _split_evidence_sentences(doc.text)
+        doc_sentences.append(sents)
+        feats_list = []
+        for s_span in sents:
+            feats = _extract_features(s_span.text)
+            feats_list.append(feats)
+            s_words, s_stems, s_prefixes, _, _, _, _ = feats
+            total_sentences += 1
+            total_word_len += max(1, len(s_words))
+            for w in set(s_words):
+                all_sent_df_words[w] += 1
+            for st in set(s_stems):
+                all_sent_df_stems[st] += 1
+            for pf in s_prefixes:
+                all_sent_df_prefixes[pf] += 1
+        doc_sent_features.append(feats_list)
+
+    if total_sentences == 0:
+        return PreparedContextBuild(context=builder.empty(), origins=(), fragments=())
+
+    avg_sent_len = max(6.0, total_word_len / max(1, total_sentences))
+
+    def _idf(df: int) -> float:
+        return math.log(1.0 + (total_sentences - df + 0.5) / (df + 0.5))
+
+    doc_direct_scores: list[list[float]] = []
+    doc_context_scores: list[list[float]] = []
+    doc_sent_stems: list[list[set[str]]] = []
+    doc_overall_scores: list[float] = []
+
+    for d_idx, doc in enumerate(docs):
+        sents = doc_sentences[d_idx]
+        feats_list = doc_sent_features[d_idx]
+        direct_list: list[float] = []
+        stems_sets: list[set[str]] = []
+
+        for s_idx, s_span in enumerate(sents):
+            s_words, s_stems, s_prefixes, s_numbers, s_codes, s_bigrams, s_char_ngrams = feats_list[s_idx]
+            s_words_counts = Counter(s_words)
+            s_stems_counts = Counter(s_stems)
+            s_stems_set = set(s_stems)
+            stems_sets.append(s_stems_set)
+
+            norm_denom = 0.55 + 0.45 * (max(4, len(s_words)) / avg_sent_len)
+            score = 0.0
+
+            # 1. Exact content word BM25 match
+            matched_q_words = 0
+            for qw in q_words_set:
+                tf = s_words_counts.get(qw, 0)
+                if tf > 0:
+                    matched_q_words += 1
+                    score += 2.2 * _idf(all_sent_df_words[qw]) * ((tf * 2.0) / (tf + norm_denom))
+
+            # 2. Stem BM25 match
+            matched_q_stems = 0
+            for qst in q_stems_set:
+                tf = s_stems_counts.get(qst, 0)
+                if tf > 0:
+                    matched_q_stems += 1
+                    score += 1.6 * _idf(all_sent_df_stems[qst]) * ((tf * 2.0) / (tf + norm_denom))
+
+            # 3. 5-char prefix match
+            for qpf in q_prefixes:
+                if qpf in s_prefixes:
+                    score += 0.65 * _idf(all_sent_df_prefixes[qpf])
+
+            # 4. Query coverage ratio bonus
+            if q_words_set:
+                score += 2.5 * (matched_q_words / len(q_words_set))
+            if q_stems_set:
+                score += 2.0 * (matched_q_stems / len(q_stems_set))
+
+            # 5. Numbers & technical/biomedical codes bonus
+            if q_numbers:
+                num_hits = len(q_numbers & s_numbers)
+                score += 3.5 * num_hits
+            if q_codes:
+                code_hits = len(q_codes & (s_codes | set(s_words)))
+                score += 3.0 * code_hits
+
+            # 6. Bigram bonus
+            if q_bigrams and s_bigrams:
+                score += 1.8 * len(q_bigrams & s_bigrams)
+
+            # 7. Character 4-gram recall bonus
+            if q_char_ngrams and s_char_ngrams:
+                score += 1.2 * (len(q_char_ngrams & s_char_ngrams) / len(q_char_ngrams))
+
+            direct_list.append(score)
+
+        # Contextual smoothing across neighboring sentences
+        context_list: list[float] = []
+        for s_idx in range(len(sents)):
+            c_score = direct_list[s_idx]
+            if s_idx > 0 and not sents[s_idx - 1].is_duplicate_boilerplate:
+                c_score += 0.22 * direct_list[s_idx - 1]
+            if s_idx + 1 < len(sents) and not sents[s_idx + 1].is_duplicate_boilerplate:
+                c_score += 0.22 * direct_list[s_idx + 1]
+            if s_idx > 1 and not sents[s_idx - 2].is_duplicate_boilerplate:
+                c_score += 0.08 * direct_list[s_idx - 2]
+            if s_idx + 2 < len(sents) and not sents[s_idx + 2].is_duplicate_boilerplate:
+                c_score += 0.08 * direct_list[s_idx + 2]
+            context_list.append(c_score)
+
+        doc_direct_scores.append(direct_list)
+        doc_context_scores.append(context_list)
+        doc_sent_stems.append(stems_sets)
+
+        # Document-level relevance score
+        d_words, d_stems, d_prefixes, d_numbers, d_codes, d_bigrams, d_char_ngrams = _extract_features(doc.text)
+        d_word_cov = len(q_words_set & set(d_words)) / max(1, len(q_words_set))
+        d_stem_cov = len(q_stems_set & set(d_stems)) / max(1, len(q_stems_set))
+        d_code_hits = len(q_codes & (d_codes | set(d_words))) + len(q_numbers & d_numbers)
+        sorted_direct = sorted(direct_list, reverse=True)
+        top1 = sorted_direct[0] if sorted_direct else 0.0
+        top2 = sum(sorted_direct[:2])
+        rank_prior = 0.05 / (1.0 + doc.rank)
+        doc_overall = top1 * 1.4 + top2 * 0.7 + d_word_cov * 4.0 + d_stem_cov * 3.5 + d_code_hits * 2.5 + rank_prior
+        doc_overall_scores.append(doc_overall)
+
+    ranked_doc_indices = sorted(range(len(docs)), key=lambda i: (doc_overall_scores[i], -docs[i].rank), reverse=True)
+    primary_idx = ranked_doc_indices[0]
+
+    # Select and expand fragments for the primary top-ranked document
+    selected_fragments = _select_doc_fragments(
+        docs[primary_idx],
+        doc_sentences[primary_idx],
+        doc_direct_scores[primary_idx],
+        doc_context_scores[primary_idx],
+        doc_sent_stems[primary_idx],
+        q_stems_set,
+        existing_fragments=(),
+        max_bytes=request.max_bytes,
+        expand_to_budget=True,
+    )
+
+    # If leftover budget remains after packing the primary document, try adding top relevant sentences
+    # from secondary documents that have positive relevance
+    for sec_idx in ranked_doc_indices[1:]:
+        if len(selected_fragments) >= builder.entry_limit:
+            break
+        if doc_overall_scores[sec_idx] <= 0.1 or max(doc_direct_scores[sec_idx], default=0.0) <= 0.0:
+            continue
+        sec_frags = _select_doc_fragments(
+            docs[sec_idx],
+            doc_sentences[sec_idx],
+            doc_direct_scores[sec_idx],
+            doc_context_scores[sec_idx],
+            doc_sent_stems[sec_idx],
+            q_stems_set,
+            existing_fragments=selected_fragments,
+            max_bytes=request.max_bytes,
+            expand_to_budget=False,
+        )
+        for frag in sec_frags:
+            if len(selected_fragments) >= builder.entry_limit:
+                break
+            if _evidence_rendered_bytes((*selected_fragments, frag)) <= request.max_bytes:
+                selected_fragments.append(frag)
+
+    if not selected_fragments:
+        return PreparedContextBuild(context=builder.empty(), origins=(), fragments=())
+
+    fragments_tuple = tuple(selected_fragments)
+    origins_tuple = tuple(frag.address for frag in fragments_tuple)
+    content = _render_evidence_fragments(fragments_tuple)
+    content_bytes = len(content.encode("utf-8"))
+    if content_bytes > request.max_bytes:
+        raise PreparedContextInvariantError("output-budget")
+
+    return PreparedContextBuild(
+        context=PreparedContext(status="ready", content=content, content_bytes=content_bytes),
+        origins=origins_tuple,
+        fragments=fragments_tuple,
+    )

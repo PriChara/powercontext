@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, nullcontext
 
 from aiosqlite import Connection as SQLiteConnection
@@ -52,6 +52,12 @@ class AsyncDatabase:
         self._shared_connection_lock = asyncio.Lock() if shared_connection else None
         self._transaction_owner: asyncio.Task[object] | None = None
         self._shared_connection: AsyncConnection | None = None
+        self._wake_bindings_callback: Callable[[frozenset[str]], None] | None = None
+
+    def set_wake_bindings_callback(self, callback: Callable[[frozenset[str]], None] | None, /) -> None:
+        """Register a post-commit callback for bindings woken inside transactions."""
+
+        self._wake_bindings_callback = callback
 
     @classmethod
     def attach(cls, engine: AsyncEngine, /) -> AsyncDatabase:
@@ -86,6 +92,7 @@ class AsyncDatabase:
                 raise DatabaseClosedError
             self._active_transactions += 1
         try:
+            committed_wake: frozenset[str] = frozenset()
             guard = self._shared_connection_lock if self._shared_connection_lock is not None else nullcontext()
             async with guard, self._engine.begin() as connection:
                 if connection.dialect.name == "mysql":
@@ -97,9 +104,13 @@ class AsyncDatabase:
                     self._shared_connection = connection
                 try:
                     yield connection
+                    committed_wake = frozenset(connection.info.pop("wake_bindings", ()))
                 finally:
+                    connection.info.pop("wake_bindings", None)
                     self._transaction_owner = None
                     self._shared_connection = None
+            if committed_wake and self._wake_bindings_callback is not None:
+                self._wake_bindings_callback(committed_wake)
         finally:
             async with self._state_changed:
                 self._active_transactions -= 1
