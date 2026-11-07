@@ -27,6 +27,7 @@ import rfc8785
 from pydantic import BaseModel, ConfigDict, JsonValue, ValidationError
 
 from powercontext.builtin.artifacts.memory.models import MemoryContent
+from powercontext.limits import MAX_SOURCE_OBSERVATION_BYTES
 
 _ENTRY_HASH_DOMAIN = b"powercontext:entry-content:v1\0"
 _EMBEDDING_HASH_DOMAIN = b"powercontext:embedding-content:v1\0"
@@ -37,7 +38,7 @@ class _CanonicalValueError(ValueError):
     def __init__(self, code: str, detail: object | None = None) -> None:
         self.code = code
         messages = {
-            "text-too-long": "memory entry text must not exceed 8192 UTF-8 bytes",
+            "text-too-long": f"memory entry text must not exceed {8192 if detail is None else detail} UTF-8 bytes",
             "reason-too-long": "memory change reason must not exceed 512 Unicode code points",
             "identifier-empty": "memory identifiers must be non-empty strings",
             "identifier-ascii": "memory identifiers must contain only ASCII characters",
@@ -78,13 +79,29 @@ def canonical_json(value: object) -> bytes:
     return rfc8785.dumps(_validated_json(value))
 
 
-def normalize_text(value: str) -> str:
+def normalize_text(value: str, *, max_bytes: int = 8192) -> str:
     """Normalize and validate one durable entry body."""
 
     normalized = _normalize_non_empty_string(value, "memory entry text")
-    if len(normalized.encode("utf-8")) > 8192:
-        raise _CanonicalValueError("text-too-long")
+    if len(normalized.encode("utf-8")) > max_bytes:
+        raise _CanonicalValueError("text-too-long", max_bytes)
     return normalized
+
+
+def normalize_entry_text(value: str, *, source_refs: Sequence[object]) -> str:
+    """Preserve whole PDF pages within the captured-observation size ceiling.
+
+    Ordinary generated Memory bodies retain the 8 KiB contract. PDF page
+    evidence has a separate full-page contract, including its persisted hash
+    and rebuild path; its references therefore select the larger bound in
+    every canonical representation, rather than just at the initial write.
+    """
+
+    normalized_refs = normalize_refs(source_refs)
+    whole_pdf_page = bool(normalized_refs) and all(
+        isinstance(ref, Mapping) and ref.get("source_type") == "pdf-page" for ref in normalized_refs
+    )
+    return normalize_text(value, max_bytes=MAX_SOURCE_OBSERVATION_BYTES if whole_pdf_page else 8192)
 
 
 def normalize_query(value: str) -> str:
@@ -160,7 +177,7 @@ def entry_content_bytes(
 
     return canonical_json({
         "kind": normalize_kind(kind),
-        "text": normalize_text(text),
+        "text": normalize_entry_text(text, source_refs=source_refs),
         "source_refs": normalize_refs(source_refs),
         "artifact_refs": normalize_refs(artifact_refs),
     })
