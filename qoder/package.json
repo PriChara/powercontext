@@ -1,0 +1,15 @@
+{
+  "name": "handover-book",
+  "version": "0.1.0",
+  "private": true,
+  "description": "课题交接簿：把一次交接的发现、证据、下一步保存到 PowerContext，按当前问题召回并生成可复制的接手清单",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "verify": "node scripts/verify.mjs",
+    "verify:offline": "node scripts/verify.mjs --offline"
+  }
+}

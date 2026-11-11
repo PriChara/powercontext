@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>课题交接簿 · 本机 Demo 说明</title>
+    <style>
+      body { margin: 0; padding: 32px 20px; font-family: system-ui, "Microsoft YaHei", sans-serif; color: #1c2330; background: #f6f7f9; line-height: 1.7; }
+      main { max-width: 860px; margin: 0 auto; }
+      h1 { font-size: 26px; margin: 0 0 6px; }
+      h2 { font-size: 17px; margin: 28px 0 8px; }
+      p, li { font-size: 15px; }
+      .tag { color: #4a5568; margin: 0 0 20px; }
+      .card { background: #fff; border: 1px solid #e3e6ea; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+      img { display: block; width: 100%; max-width: 820px; height: auto; border: 1px solid #e3e6ea; border-radius: 8px; background: #fff; }
+      code, pre { font-family: ui-monospace, Consolas, monospace; font-size: 13.5px; }
+      code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; }
+      pre { background: #eef1f4; padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+      .score { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 12px; }
+      .pill { background: #e8f5ee; border: 1px solid #b7dfc6; color: #17603a; border-radius: 999px; padding: 3px 12px; font-size: 14px; }
+      .warn { background: #fff7e6; border: 1px solid #f0d9a0; color: #6b4d09; border-radius: 8px; padding: 12px 16px; font-size: 14px; }
+      a { color: #1a5fd0; }
+      ul { margin: 6px 0; padding-left: 22px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>课题交接簿</h1>
+      <p class="tag">保存一次交接的发现、证据、下一步；按当前问题从 PowerContext 召回，生成可复制的接手清单。</p>
+
+      <div class="warn"><strong>本机运行声明：</strong>应用只监听 <code>127.0.0.1</code>（默认 8787），拒绝非本机 Host 请求；不使用真实用户数据、不调用任何公网 API，页面与验收里出现的课题、人名、日志全部为原创虚构素材。</div>
+
+      <h2>界面截图</h2>
+      <img src="recall-preview.png" alt="课题交接簿召回接手清单的本机运行截图" />
+
+      <h2>课题交接簿做了什么</h2>
+      <div class="card">
+        <ul>
+          <li>第 1 步 回到课题：课题名派生成稳定的 <code>idempotency_key</code>，同名课题复用同一个 <code>scope_id</code>。</li>
+          <li>第 2 步 保存交接：标题、现象与发现、证据、结论、下一步（必填）、风险，写入一条记忆并带上记录号 <code>hb-xxxxxxxxxx</code>。</li>
+          <li>第 3 步 召回清单：输入当前问题，得到按原文片段排版的接手清单，每条都能溯源到记录号；无结果时只给提示，不编造。</li>
+          <li>第 4 步 本机回执：只记录「调用过什么、返回的 entry 是什么」，召回内容本身不落盘。</li>
+        </ul>
+      </div>
+
+      <h2>PowerContext</h2>
+      <div class="card">
+        <p>PowerContext 保存与召回交接记录，应用按来源组织清单。<a href="https://github.com/PriChara/powercontext/tree/sunhao-qoder/qoder">查看源码、运行说明和验收记录</a>。</p>
+<pre>固定源码版本：dab240063bfcfa7917898dc44da4baadb3747bd0
+本机地址：http://127.0.0.1:18379
+用到的接口：POST /v1/scopes · POST /v1/memory/remember · POST /v1/context/prepare</pre>
+      </div>
+
+      <h2>验收流程</h2>
+      <div class="card">
+<pre>npm start          # 启动应用（Node 22+，只监听 127.0.0.1:8787）
+npm run verify     # 端到端验证：直接调 PowerContext + 真实调应用接口
+npm run verify:offline   # 服务不可用时只验应用侧</pre>
+        <p>验证脚本逐条打印本机实际请求的返回值，原样保存到 <code>docs/test-output/verify-&lt;运行编号&gt;.txt</code>，不人工修饰。</p>
+      </div>
+
+      <h2>35 项测试结果</h2>
+      <div class="card">
+        <div class="score"><span class="pill">PASS 35</span><span class="pill">FAIL 0</span><span class="pill">SKIP 0</span></div>
+        <ul>
+          <li>0 运行环境（1 项）：Node 版本满足 22+</li>
+          <li>1 PowerContext 契约（6 项）：创建课题返回 scope_id、同幂等键复用、两条保存返回可区分 entry、prepare 命中记录标记</li>
+          <li>2 启动与首页（3 项）：127.0.0.1 监听并报告配置、页面与脚本同源且带 CSP、拒绝非本机 Host</li>
+          <li>3 保存与召回（8 项）：项目名拿 scope、保存两条可区分、召回命中相关问题、清单全部溯源、搜索词与原文对应</li>
+          <li>4 换问题（1 项）：第二次召回命中另一条记录</li>
+          <li>5 重启应用（2 项）：同名课题回到同一 scope、重启后仍召回两条交接</li>
+          <li>6 课题隔离（3 项）：不同课题 scope 不同，且两个方向都不串记录</li>
+          <li>7 无结果（3 项）：空课题不编造条目、不串已保存课题、给出可读提示</li>
+          <li>8 文本安全（5 项）：伪造 hb- 标记消歧、超长字段 400、缺「下一步」400、非法 max_bytes 400、特殊字符不崩溃</li>
+          <li>9 错误反馈（3 项）：服务不可用返回 502 与可读原因、召回同样报错、进程不崩溃</li>
+        </ul>
+      </div>
+    </main>
+  </body>
+</html>

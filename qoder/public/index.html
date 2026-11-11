@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>课题交接簿 · PowerContext</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>课题交接簿</h1>
+        <p class="tagline">保存一次交接的发现、证据和下一步；按当前问题从 PowerContext 召回，生成可复制的接手清单。</p>
+      </div>
+      <div id="service-status" class="service">正在检查本机服务…</div>
+    </header>
+
+    <main>
+      <section class="panel" id="panel-project">
+        <h2><span class="step">1</span>回到同一个课题</h2>
+        <p class="hint">课题名会派生成稳定的 <code>idempotency_key</code>，同名课题复用同一个 PowerContext <code>scope_id</code>。</p>
+        <div class="row">
+          <label class="grow"
+            >课题名<input id="project-name" placeholder="例如：示例课题A：机械臂相机标定复现（虚构）" autocomplete="off"
+          /></label>
+          <button id="btn-open" class="primary">进入课题</button>
+        </div>
+        <label class="block"
+          >课题摘要（可选，写入 scope 的 summary）<input id="project-summary" placeholder="一句话说清这个课题在做什么"
+        /></label>
+        <div class="row">
+          <label class="compact">原创示例课题<select id="example-select"></select></label>
+          <button id="btn-load-examples" class="ghost">载入所选示例（写入 PowerContext）</button>
+        </div>
+        <div id="recent-projects" class="chips"></div>
+        <dl id="scope-info" class="kv hidden"></dl>
+      </section>
+
+      <section class="panel" id="panel-save">
+        <h2><span class="step">2</span>保存一次交接</h2>
+        <p class="hint">
+          每个字段都会写进 <code>POST /v1/memory/remember</code> 的 <code>text</code>（<code>kind: decision</code>），并带上记录号
+          <code>hb-xxxxxxxxxx</code> 作为溯源标记。
+        </p>
+        <label class="block">标题（一句话说明这次交接在讲什么）<input id="f-title" placeholder="例如：标定后抓取偏差 12 mm，怀疑标定文件没落盘" /></label>
+        <label class="block">现象与发现（每行一条）<textarea id="f-finding" rows="3" placeholder="重启采集容器后偏差从 2 mm 变成 12 mm…"></textarea></label>
+        <label class="block">证据（日志片段、命令输出、文件哈希等，每行一条）<textarea id="f-evidence" rows="3" placeholder="logs/calib.log 第 41 行：loaded intrinsic from /tmp/calib.yaml"></textarea></label>
+        <label class="block">结论或判断<textarea id="f-conclusion" rows="2" placeholder="问题出在加载路径，不是标定算法"></textarea></label>
+        <label class="block">下一步（必填，每行一条，接手清单会逐条引用）<textarea id="f-next" rows="3" placeholder="把标定输出目录改到持久卷 /data/calib"></textarea></label>
+        <label class="block">风险或不要做<textarea id="f-risks" rows="2" placeholder="不要热替换 yaml，会半写入"></textarea></label>
+        <div class="row">
+          <button id="btn-save" class="primary" disabled>保存到 PowerContext</button>
+          <span id="save-status" class="inline-status"></span>
+        </div>
+        <details id="save-detail" class="hidden">
+          <summary>查看这次发送的 <code>text</code> 与返回的 <code>entry</code></summary>
+          <pre id="save-detail-body"></pre>
+        </details>
+      </section>
+
+      <section class="panel" id="panel-recall">
+        <h2><span class="step">3</span>输入当前问题，生成接手清单</h2>
+        <p class="hint">召回请求为 <code>POST /v1/context/prepare</code>，参数含 <code>scope_id</code>、<code>query</code>、<code>max_bytes</code>。清单条目逐条来自返回的原文片段。</p>
+        <div class="row">
+          <label class="grow">当前问题<input id="recall-query" placeholder="例如：重启后抓取偏差变大，下一步该做什么" /></label>
+          <label class="compact">max_bytes<input id="recall-max-bytes" type="number" min="512" max="20000" step="512" value="8000" /></label>
+          <button id="btn-recall" class="primary" disabled>召回并生成清单</button>
+        </div>
+        <div id="recall-summary" class="statusbox hidden"></div>
+        <div id="recall-sources" class="sources"></div>
+        <div class="row between">
+          <h3 class="sub">接手清单（可直接复制）</h3>
+          <button id="btn-copy" class="ghost" disabled>复制清单</button>
+        </div>
+        <pre id="checklist-text" class="mono">还没有召回内容。</pre>
+        <details id="raw-detail">
+          <summary>查看 PowerContext 返回的 <code>content</code> 原文</summary>
+          <pre id="recall-raw" class="mono"></pre>
+        </details>
+      </section>
+
+      <section class="panel" id="panel-receipts">
+        <h2><span class="step">4</span>本机写入回执</h2>
+        <p class="hint">
+          回执只记录「调用过 remember、返回的 entry 是什么」，用于把召回原文对回保存记录；召回内容本身不落盘。
+        </p>
+        <div id="receipt-list" class="receipts"></div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        只监听 127.0.0.1，凭据不经本工具读取；PowerContext 地址由环境变量 <code>POWERCONTEXT_URL</code> 配置。示例数据为原创虚构素材。
+      </p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
