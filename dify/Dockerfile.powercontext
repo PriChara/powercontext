@@ -1,0 +1,5 @@
+FROM python:3.12-slim-bookworm
+ARG POWERCONTEXT_REV=dab240063bfcfa7917898dc44da4baadb3747bd0
+RUN SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0+dab2400 python -m pip install --no-cache-dir \
+    "powercontext[server,cli] @ https://codeload.github.com/oceanbase/powercontext/tar.gz/${POWERCONTEXT_REV}"
+CMD ["powercontext", "server", "run"]

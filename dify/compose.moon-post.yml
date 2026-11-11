@@ -1,0 +1,23 @@
+services:
+  moon-post-memory:
+    build:
+      context: ${MOON_POST_DIR:?Set MOON_POST_DIR to the absolute path of the dify entry directory}
+      dockerfile: Dockerfile.powercontext
+    environment:
+      POWERCONTEXT_HOME: /data
+      POWERCONTEXT_SERVER_HTTP_HOST: 0.0.0.0
+      POWERCONTEXT_SERVER_ALLOW_UNAUTHENTICATED_NON_LOOPBACK: 'true'
+      POWERCONTEXT_SERVER_ALLOW_INSECURE_HTTP: 'true'
+    volumes:
+      - moon_post_memory:/data
+    networks:
+      - ssrf_proxy_network
+  ssrf_proxy:
+    environment:
+      SSRF_PROXY_ALLOW_PRIVATE_DOMAINS: moon-post-memory
+  nginx:
+    ports: !override
+      - '127.0.0.1:18376:80'
+
+volumes:
+  moon_post_memory:

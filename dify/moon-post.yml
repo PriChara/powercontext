@@ -1,0 +1,585 @@
+kind: app
+version: 0.7.0
+dependencies: []
+app:
+  name: 月球邮局
+  mode: workflow
+  description: 寄存一枚印章，下次拿回执回来解谜。
+  icon: 🌙
+  icon_background: '#e4e8ff'
+  use_icon_as_answer_icon: false
+workflow:
+  conversation_variables: []
+  features: {}
+  environment_variables:
+  - id: e6167666-7554-4f2f-9575-962264c7a2a7
+    name: MOON_POST_PC_URL
+    value: http://moon-post-memory:8000
+    value_type: string
+    description: Docker 网络中的 PowerContext 地址
+  graph:
+    nodes:
+    - id: start
+      type: custom
+      position:
+        x: 0
+        y: 0
+      positionAbsolute:
+        x: 0
+        y: 0
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: start
+        title: 进月球邮局
+        desc: ''
+        selected: false
+        variables:
+        - label: 操作
+          variable: action
+          type: select
+          required: true
+          options:
+          - 开局：寄存月兔章
+          - 开局：寄存星环章
+          - 回来：走脚印门
+          - 回来：走光环门
+        - label: 回执（仅回来时填写）
+          variable: ticket
+          type: text-input
+          max_length: 32
+          required: false
+          options: []
+    - id: entry
+      type: custom
+      position:
+        x: 300
+        y: 0
+      positionAbsolute:
+        x: 300
+        y: 0
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 核对操作和回执
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import hashlib
+          import json
+          import re
+          import uuid
+
+          def main(action: str, ticket: str) -> dict:
+              """Open a new story or recover a returning player's namespace."""
+              if action == "开局：寄存月兔章" or action == "开局：寄存星环章":
+                  ticket = uuid.uuid4().hex
+                  mode = "deposit"
+                  seal = "rabbit" if "月兔" in action else "ring"
+              elif action in ("回来：走脚印门", "回来：走光环门"):
+                  ticket = (ticket or "").strip().lower()
+                  if not re.fullmatch(r"[a-f0-9]{32}", ticket):
+                      raise ValueError("请输入开局时取得的 32 位回执。")
+                  mode, seal = "recall", "rabbit" if "脚印" in action else "ring"
+              else:
+                  raise ValueError("请选择一个邮局操作。")
+              scope_body = json.dumps({
+                  "title": "月球邮局单局存档",
+                  "summary": "Stores the seal chosen for one Moon Post Office game.",
+                  "idempotency_key": "moon-post-" + hashlib.sha256(ticket.encode()).hexdigest(),
+              })
+              return {"scope_body": scope_body, "ticket": ticket, "mode": mode, "seal": seal}
+        variables:
+        - variable: action
+          value_selector:
+          - start
+          - action
+        - variable: ticket
+          value_selector:
+          - start
+          - ticket
+        outputs:
+          scope_body:
+            type: string
+            children: null
+          ticket:
+            type: string
+            children: null
+          mode:
+            type: string
+            children: null
+          seal:
+            type: string
+            children: null
+    - id: scope
+      type: custom
+      position:
+        x: 600
+        y: 0
+      positionAbsolute:
+        x: 600
+        y: 0
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: 打开 PowerContext 存档
+        desc: ''
+        selected: false
+        url: '{{#env.MOON_POST_PC_URL#}}/v1/scopes'
+        method: post
+        authorization:
+          type: no-auth
+          config: null
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: raw-text
+          data:
+          - id: body
+            key: ''
+            type: text
+            value: '{{#entry.scope_body#}}'
+        timeout:
+          max_connect_timeout: 5
+          max_read_timeout: 15
+          max_write_timeout: 5
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 100
+    - id: payload
+      type: custom
+      position:
+        x: 900
+        y: 0
+      positionAbsolute:
+        x: 900
+        y: 0
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 整理寄存或检索请求
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import hashlib
+          import json
+          import re
+          import uuid
+
+          def main(body: str, status: int, seal: str) -> dict:
+              if not 200 <= status < 300:
+                  raise ValueError("PowerContext 无法打开邮局存档。")
+              scope = json.loads(body)["scope_id"]
+              return {
+                  "remember_body": json.dumps({
+                      "scope_id": scope, "kind": "decision", "text": f"moonpostseal {seal}",
+                      "reason": "Player chose their moon post office seal",
+                  }),
+                  "recall_body": json.dumps({"scope_id": scope, "query": "moonpostseal", "max_bytes": 4000}),
+              }
+        variables:
+        - variable: body
+          value_selector:
+          - scope
+          - body
+        - variable: status
+          value_selector:
+          - scope
+          - status_code
+        - variable: seal
+          value_selector:
+          - entry
+          - seal
+        outputs:
+          remember_body:
+            type: string
+            children: null
+          recall_body:
+            type: string
+            children: null
+    - id: route
+      type: custom
+      position:
+        x: 1200
+        y: 0
+      positionAbsolute:
+        x: 1200
+        y: 0
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: if-else
+        title: 寄存还是取信
+        desc: ''
+        selected: false
+        cases:
+        - case_id: 'true'
+          logical_operator: and
+          conditions:
+          - id: deposit-mode
+            varType: string
+            variable_selector:
+            - entry
+            - mode
+            comparison_operator: is
+            value: deposit
+    - id: remember
+      type: custom
+      position:
+        x: 1500
+        y: -130
+      positionAbsolute:
+        x: 1500
+        y: -130
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: 将印章写入 PowerContext
+        desc: ''
+        selected: false
+        url: '{{#env.MOON_POST_PC_URL#}}/v1/memory/remember'
+        method: post
+        authorization:
+          type: no-auth
+          config: null
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: raw-text
+          data:
+          - id: body
+            key: ''
+            type: text
+            value: '{{#payload.remember_body#}}'
+        timeout:
+          max_connect_timeout: 5
+          max_read_timeout: 15
+          max_write_timeout: 5
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 100
+    - id: recall
+      type: custom
+      position:
+        x: 1500
+        y: 150
+      positionAbsolute:
+        x: 1500
+        y: 150
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: 从 PowerContext 找回印章
+        desc: ''
+        selected: false
+        url: '{{#env.MOON_POST_PC_URL#}}/v1/context/prepare'
+        method: post
+        authorization:
+          type: no-auth
+          config: null
+        headers: Content-Type:application/json
+        params: ''
+        body:
+          type: raw-text
+          data:
+          - id: body
+            key: ''
+            type: text
+            value: '{{#payload.recall_body#}}'
+        timeout:
+          max_connect_timeout: 5
+          max_read_timeout: 15
+          max_write_timeout: 5
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 100
+    - id: receipt
+      type: custom
+      position:
+        x: 1800
+        y: -130
+      positionAbsolute:
+        x: 1800
+        y: -130
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 发放回执和线索
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import hashlib
+          import json
+          import re
+          import uuid
+
+          def main(body: str, status: int, ticket: str, seal: str) -> dict:
+              if not 200 <= status < 300 or not json.loads(body).get("entry"):
+                  raise ValueError("PowerContext 未确认寄存，请重新开局。")
+              name, hint = ("月兔章", "它在月尘上留下两串脚印。") if seal == "rabbit" else ("星环章", "它像一圈绕月飞行的光。")
+              return {"story": f"邮差把{name}锁进信柜：『下次回来，找与你的印章相配的门。{hint}』\n回执：{ticket}"}
+        variables:
+        - variable: body
+          value_selector:
+          - remember
+          - body
+        - variable: status
+          value_selector:
+          - remember
+          - status_code
+        - variable: ticket
+          value_selector:
+          - entry
+          - ticket
+        - variable: seal
+          value_selector:
+          - entry
+          - seal
+        outputs:
+          story:
+            type: string
+            children: null
+    - id: finale
+      type: custom
+      position:
+        x: 1800
+        y: 150
+      positionAbsolute:
+        x: 1800
+        y: 150
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 根据记忆判定结局
+        desc: ''
+        selected: false
+        code_language: python3
+        code: |
+          import hashlib
+          import json
+          import re
+          import uuid
+
+          def main(body: str, status: int, seal: str) -> dict:
+              if not 200 <= status < 300:
+                  raise ValueError("PowerContext 无法读取邮局存档，请稍后再试。")
+              prepared = json.loads(body)
+              matches = set(re.findall(r"\bmoonpostseal (rabbit|ring)\b", prepared.get("content") or ""))
+              if prepared.get("status") != "ready" or len(matches) != 1:
+                  return {"story": "邮差翻遍信柜也没找到这张回执的印章。请检查回执，或重新开局。", "ending": "missing"}
+              if seal not in matches:
+                  return {"story": "门后只传来一阵月风。邮差说：『想想印章留下的线索，再试另一扇门。』", "ending": "retry"}
+              reward = "月兔替你签收了第一封地球来信。" if seal == "rabbit" else "光环展开成星图，标出了下一站。"
+              return {"story": f"门上的凹槽亮了。{reward}", "ending": "open"}
+        variables:
+        - variable: body
+          value_selector:
+          - recall
+          - body
+        - variable: status
+          value_selector:
+          - recall
+          - status_code
+        - variable: seal
+          value_selector:
+          - entry
+          - seal
+        outputs:
+          story:
+            type: string
+            children: null
+          ending:
+            type: string
+            children: null
+    - id: end-deposit
+      type: custom
+      position:
+        x: 2100
+        y: -130
+      positionAbsolute:
+        x: 2100
+        y: -130
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: end
+        title: 拿走回执
+        desc: ''
+        selected: false
+        outputs:
+        - variable: story
+          value_selector:
+          - receipt
+          - story
+          value_type: string
+        - variable: ticket
+          value_selector:
+          - entry
+          - ticket
+          value_type: string
+    - id: end-return
+      type: custom
+      position:
+        x: 2100
+        y: 150
+      positionAbsolute:
+        x: 2100
+        y: 150
+      width: 244
+      height: 85
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: end
+        title: 查看结局
+        desc: ''
+        selected: false
+        outputs:
+        - variable: story
+          value_selector:
+          - finale
+          - story
+          value_type: string
+        - variable: ending
+          value_selector:
+          - finale
+          - ending
+          value_type: string
+    edges:
+    - id: start-source-entry
+      source: start
+      target: entry
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+    - id: entry-source-scope
+      source: entry
+      target: scope
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+    - id: scope-source-payload
+      source: scope
+      target: payload
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: payload-source-route
+      source: payload
+      target: route
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: if-else
+        isInIteration: false
+    - id: remember-source-receipt
+      source: remember
+      target: receipt
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: recall-source-finale
+      source: recall
+      target: finale
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: receipt-source-end-deposit
+      source: receipt
+      target: end-deposit
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: end
+        isInIteration: false
+    - id: finale-source-end-return
+      source: finale
+      target: end-return
+      type: custom
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: end
+        isInIteration: false
+    - id: route-true-remember
+      source: route
+      target: remember
+      type: custom
+      sourceHandle: 'true'
+      targetHandle: target
+      data:
+        sourceType: if-else
+        targetType: http-request
+        isInIteration: false
+    - id: route-false-recall
+      source: route
+      target: recall
+      type: custom
+      sourceHandle: 'false'
+      targetHandle: target
+      data:
+        sourceType: if-else
+        targetType: http-request
+        isInIteration: false
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.65
