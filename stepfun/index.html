@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本地文档检索 · StepFun</title>
+</head>
+<body>
+  <header><div><p class="eyebrow">STEPFUN × SEEKDB</p><h1>本地文档检索</h1></div><output id="backend">推理后端未加载</output></header>
+  <main>
+    <aside aria-label="知识库设置">
+      <h2>知识库</h2>
+      <label for="library">知识库名称</label>
+      <input id="library" maxlength="80" value="我的知识库">
+      <label for="mode">推理模式</label>
+      <select id="mode">
+        <option value="auto">自动 · WebGPU 优先</option>
+        <option value="wasm-q8">WASM · INT8</option>
+        <option value="webgpu-fp16">WebGPU · FP16</option>
+        <option value="wasm-fp32">WASM · FP32 基线</option>
+      </select>
+      <label for="files">导入 UTF-8 文档</label>
+      <input id="files" type="file" accept=".txt,.md,text/plain,text/markdown" multiple>
+      <div class="actions"><button id="import" type="button">导入文件</button><button id="sample" type="button" class="secondary">导入示例</button></div>
+      <p class="hint">不同知识库和模型精度分别存储。首次推理需要下载模型。</p>
+      <button id="benchmark" type="button" class="secondary">运行性能与质量测试</button>
+      <a id="download" hidden download="stepfun-benchmark.json">下载测试记录</a>
+    </aside>
+    <section aria-label="检索">
+      <form id="search"><label for="query">搜索原文</label><div class="search-row"><input id="query" required maxlength="240" placeholder="例如 recover the database to a point in time"><button>检索</button></div></form>
+      <p id="status" role="status">导入示例或选择文档开始。</p>
+      <div id="results"></div>
+    </section>
+  </main>
+  <script type="module" src="/main.js"></script>
+</body>
+</html>

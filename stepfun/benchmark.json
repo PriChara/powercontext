@@ -1,0 +1,781 @@
+{
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
+  "documents": 12,
+  "queries": 8,
+  "trials": 3,
+  "runs": [
+    {
+      "mode": "wasm-fp32",
+      "loadMs": 3937.5999999996275,
+      "weightFetchMs": 2336.300000000745,
+      "indexing": [
+        {
+          "batchSize": 1,
+          "embedMs": 436
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 168.40000000037253
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 163.59999999962747
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 238.90000000037253
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 563.6999999992549
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 617.8000000007451
+        }
+      ],
+      "searches": [
+        {
+          "trial": 0,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 36.100000001490116,
+          "dbMs": 12.41939999999886,
+          "totalMs": 50.70000000111759
+        },
+        {
+          "trial": 0,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 33.29999999888241,
+          "dbMs": 5.0451000000030035,
+          "totalMs": 40.79999999888241
+        },
+        {
+          "trial": 0,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 18.800000000745058,
+          "dbMs": 4.040000000008149,
+          "totalMs": 24.600000001490116
+        },
+        {
+          "trial": 0,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 15.099999999627471,
+          "dbMs": 3.957699999999022,
+          "totalMs": 20.699999999254942
+        },
+        {
+          "trial": 0,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 8.699999999254942,
+          "dbMs": 3.9303000000072643,
+          "totalMs": 14.199999999254942
+        },
+        {
+          "trial": 0,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 21.700000001117587,
+          "dbMs": 4.644899999999325,
+          "totalMs": 28.300000000745058
+        },
+        {
+          "trial": 0,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 11.400000000372529,
+          "dbMs": 4.459600000001956,
+          "totalMs": 17.90000000037253
+        },
+        {
+          "trial": 0,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 21.199999999254942,
+          "dbMs": 4.685600000011618,
+          "totalMs": 27.799999998882413
+        },
+        {
+          "trial": 1,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 19.600000001490116,
+          "dbMs": 4.16459999998915,
+          "totalMs": 25.600000001490116
+        },
+        {
+          "trial": 1,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 33,
+          "dbMs": 4.75690000000759,
+          "totalMs": 39.59999999962747
+        },
+        {
+          "trial": 1,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 18.299999998882413,
+          "dbMs": 4.294300000008661,
+          "totalMs": 24.5
+        },
+        {
+          "trial": 1,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 14.599999999627471,
+          "dbMs": 4.657400000010966,
+          "totalMs": 21.199999999254942
+        },
+        {
+          "trial": 1,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 8.300000000745058,
+          "dbMs": 3.9945999999908963,
+          "totalMs": 14.200000001117587
+        },
+        {
+          "trial": 1,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 21.899999998509884,
+          "dbMs": 4.3303000000014435,
+          "totalMs": 28.199999999254942
+        },
+        {
+          "trial": 1,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 11.599999999627471,
+          "dbMs": 3.7449000000051456,
+          "totalMs": 17
+        },
+        {
+          "trial": 1,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 21.59999999962747,
+          "dbMs": 4.115200000000186,
+          "totalMs": 27.699999999254942
+        },
+        {
+          "trial": 2,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 18.800000000745058,
+          "dbMs": 4.208299999998417,
+          "totalMs": 24.90000000037253
+        },
+        {
+          "trial": 2,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 32,
+          "dbMs": 4.248200000001816,
+          "totalMs": 38.20000000111759
+        },
+        {
+          "trial": 2,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 18.5,
+          "dbMs": 4.430500000002212,
+          "totalMs": 24.699999999254942
+        },
+        {
+          "trial": 2,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 15.099999999627471,
+          "dbMs": 4.522100000001956,
+          "totalMs": 21.5
+        },
+        {
+          "trial": 2,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 7.199999999254942,
+          "dbMs": 3.7520999999978812,
+          "totalMs": 12.800000000745058
+        },
+        {
+          "trial": 2,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 7.399999998509884,
+          "dbMs": 3.9351000000024214,
+          "totalMs": 13.299999998882413
+        },
+        {
+          "trial": 2,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 4.800000000745058,
+          "dbMs": 3.5561000000016065,
+          "totalMs": 10
+        },
+        {
+          "trial": 2,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 7.400000000372529,
+          "dbMs": 4.056199999991804,
+          "totalMs": 13
+        }
+      ],
+      "import": {
+        "embedMs": 604.3999999985099,
+        "writeMs": 48.24140000001353,
+        "refreshMs": 509.87979999999516
+      },
+      "recallAt5": 1,
+      "ndcgAt5": 0.9375
+    },
+    {
+      "mode": "wasm-q8",
+      "loadMs": 680.3000000007451,
+      "weightFetchMs": 538.2999999988824,
+      "indexing": [
+        {
+          "batchSize": 1,
+          "embedMs": 126.59999999962747
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 116.20000000111759
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 118
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 120.5
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 111.29999999888241
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 107.80000000074506
+        }
+      ],
+      "searches": [
+        {
+          "trial": 0,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 16.5,
+          "dbMs": 12.536200000002282,
+          "totalMs": 32.5
+        },
+        {
+          "trial": 0,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 9.900000000372529,
+          "dbMs": 4.247899999987567,
+          "totalMs": 15.900000000372529
+        },
+        {
+          "trial": 0,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 4.899999998509884,
+          "dbMs": 3.944199999998091,
+          "totalMs": 10.399999998509884
+        },
+        {
+          "trial": 0,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 4.100000001490116,
+          "dbMs": 3.2311999999947147,
+          "totalMs": 8.700000001117587
+        },
+        {
+          "trial": 0,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 3.099999999627471,
+          "dbMs": 3.8280999999988126,
+          "totalMs": 8.599999999627471
+        },
+        {
+          "trial": 0,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 5.400000000372529,
+          "dbMs": 3.5142999999952735,
+          "totalMs": 10.300000000745058
+        },
+        {
+          "trial": 0,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 4,
+          "dbMs": 3.698400000008405,
+          "totalMs": 9.099999999627471
+        },
+        {
+          "trial": 0,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 5.699999999254942,
+          "dbMs": 3.9781999999977415,
+          "totalMs": 11.199999999254942
+        },
+        {
+          "trial": 1,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 5,
+          "dbMs": 3.8497000000061234,
+          "totalMs": 10.400000000372529
+        },
+        {
+          "trial": 1,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 7.599999999627471,
+          "dbMs": 4.4152999999932945,
+          "totalMs": 13.699999999254942
+        },
+        {
+          "trial": 1,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 4.900000000372529,
+          "dbMs": 3.960399999996298,
+          "totalMs": 10.5
+        },
+        {
+          "trial": 1,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 4,
+          "dbMs": 3.4698999999964144,
+          "totalMs": 8.900000000372529
+        },
+        {
+          "trial": 1,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 3,
+          "dbMs": 3.709999999991851,
+          "totalMs": 8.400000000372529
+        },
+        {
+          "trial": 1,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 5.400000000372529,
+          "dbMs": 3.661999999996624,
+          "totalMs": 10.5
+        },
+        {
+          "trial": 1,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 3.700000001117587,
+          "dbMs": 3.682200000010198,
+          "totalMs": 8.900000000372529
+        },
+        {
+          "trial": 1,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 5.199999999254942,
+          "dbMs": 3.903100000010454,
+          "totalMs": 10.800000000745058
+        },
+        {
+          "trial": 2,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 4.899999998509884,
+          "dbMs": 3.8945999999996275,
+          "totalMs": 10.399999998509884
+        },
+        {
+          "trial": 2,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 7.5,
+          "dbMs": 4.063399999999092,
+          "totalMs": 13.300000000745058
+        },
+        {
+          "trial": 2,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 5,
+          "dbMs": 4.63200000001234,
+          "totalMs": 11.800000000745058
+        },
+        {
+          "trial": 2,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 4.199999999254942,
+          "dbMs": 3.523399999990943,
+          "totalMs": 9.5
+        },
+        {
+          "trial": 2,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 3.399999998509884,
+          "dbMs": 3.885600000008708,
+          "totalMs": 9
+        },
+        {
+          "trial": 2,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 5.599999999627471,
+          "dbMs": 3.936100000006263,
+          "totalMs": 11.699999999254942
+        },
+        {
+          "trial": 2,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 4,
+          "dbMs": 3.834900000001653,
+          "totalMs": 9.5
+        },
+        {
+          "trial": 2,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 5.800000000745058,
+          "dbMs": 4.138600000005681,
+          "totalMs": 11.800000000745058
+        }
+      ],
+      "import": {
+        "embedMs": 108.19999999925494,
+        "writeMs": 43.44539999998233,
+        "refreshMs": 604.5316999999923
+      },
+      "recallAt5": 1,
+      "ndcgAt5": 0.9375
+    },
+    {
+      "mode": "webgpu-fp16",
+      "loadMs": 1604.9000000003725,
+      "weightFetchMs": 1054.5,
+      "indexing": [
+        {
+          "batchSize": 1,
+          "embedMs": 407.09999999962747
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 42.20000000111759
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 13.299999998882413
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 79.20000000111759
+        },
+        {
+          "batchSize": 1,
+          "embedMs": 82.39999999850988
+        },
+        {
+          "batchSize": 8,
+          "embedMs": 13.600000001490116
+        }
+      ],
+      "searches": [
+        {
+          "trial": 0,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 10.799999998882413,
+          "dbMs": 10.484599999996135,
+          "totalMs": 23.899999998509884
+        },
+        {
+          "trial": 0,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 6.600000001490116,
+          "dbMs": 4.063000000009197,
+          "totalMs": 12.400000000372529
+        },
+        {
+          "trial": 0,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 6.099999999627471,
+          "dbMs": 3.8708999999944353,
+          "totalMs": 11.800000000745058
+        },
+        {
+          "trial": 0,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 6.5,
+          "dbMs": 3.7211999999999534,
+          "totalMs": 12.099999999627471
+        },
+        {
+          "trial": 0,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 30.59999999962747,
+          "dbMs": 4.547299999991083,
+          "totalMs": 36.90000000037253
+        },
+        {
+          "trial": 0,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 6,
+          "dbMs": 3.9847000000008848,
+          "totalMs": 11.799999998882413
+        },
+        {
+          "trial": 0,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 6.600000001490116,
+          "dbMs": 5.840100000001257,
+          "totalMs": 14.600000001490116
+        },
+        {
+          "trial": 0,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 6.799999998882413,
+          "dbMs": 4.918699999994715,
+          "totalMs": 13.799999998882413
+        },
+        {
+          "trial": 1,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 7.400000000372529,
+          "dbMs": 4.7304000000003725,
+          "totalMs": 14.400000000372529
+        },
+        {
+          "trial": 1,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 6.800000000745058,
+          "dbMs": 4.3435000000026776,
+          "totalMs": 13.400000000372529
+        },
+        {
+          "trial": 1,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 8.299999998882413,
+          "dbMs": 4.4909999999945285,
+          "totalMs": 15
+        },
+        {
+          "trial": 1,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 6.5,
+          "dbMs": 4.8585000000020955,
+          "totalMs": 13.699999999254942
+        },
+        {
+          "trial": 1,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 7.5,
+          "dbMs": 5.029099999999744,
+          "totalMs": 14.700000001117587
+        },
+        {
+          "trial": 1,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 7.199999999254942,
+          "dbMs": 4.932700000004843,
+          "totalMs": 14.299999998882413
+        },
+        {
+          "trial": 1,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 7.200000001117587,
+          "dbMs": 4.486799999998766,
+          "totalMs": 13.600000001490116
+        },
+        {
+          "trial": 1,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 7.199999999254942,
+          "dbMs": 4.525000000008731,
+          "totalMs": 13.799999998882413
+        },
+        {
+          "trial": 2,
+          "query": "how to wait progressively longer after transient requests fail",
+          "relevant": "Retry policy",
+          "rank": 1,
+          "embedMs": 7.599999999627471,
+          "dbMs": 4.611900000003516,
+          "totalMs": 14
+        },
+        {
+          "trial": 2,
+          "query": "move all clients to a new credential before disabling the original one",
+          "relevant": "Key rotation",
+          "rank": 3,
+          "embedMs": 7.900000000372529,
+          "dbMs": 5.406300000002375,
+          "totalMs": 15.400000000372529
+        },
+        {
+          "trial": 2,
+          "query": "recover the database to a point in time",
+          "relevant": "Backup recovery",
+          "rank": 1,
+          "embedMs": 7.099999999627471,
+          "dbMs": 5.30439999999362,
+          "totalMs": 14.900000000372529
+        },
+        {
+          "trial": 2,
+          "query": "use a form without a mouse",
+          "relevant": "Keyboard access",
+          "rank": 1,
+          "embedMs": 10.299999998882413,
+          "dbMs": 5.404399999999441,
+          "totalMs": 17.90000000037253
+        },
+        {
+          "trial": 2,
+          "query": "reciprocal rank fusion",
+          "relevant": "Search ranking",
+          "rank": 1,
+          "embedMs": 7.399999998509884,
+          "dbMs": 5.170599999997648,
+          "totalMs": 15.199999999254942
+        },
+        {
+          "trial": 2,
+          "query": "avoid wasting time on model padding when processing many texts",
+          "relevant": "Batch inference",
+          "rank": 1,
+          "embedMs": 8.5,
+          "dbMs": 4.973899999997229,
+          "totalMs": 15.699999999254942
+        },
+        {
+          "trial": 2,
+          "query": "limit traffic but tolerate bursts",
+          "relevant": "Rate control",
+          "rank": 1,
+          "embedMs": 6.700000001117587,
+          "dbMs": 4.618300000001909,
+          "totalMs": 13.400000000372529
+        },
+        {
+          "trial": 2,
+          "query": "when does a newly inserted document show up in search",
+          "relevant": "Index visibility",
+          "rank": 1,
+          "embedMs": 9.099999999627471,
+          "dbMs": 5.062000000005355,
+          "totalMs": 16.300000000745058
+        }
+      ],
+      "import": {
+        "embedMs": 13.499999998137355,
+        "writeMs": 42.45109999999113,
+        "refreshMs": 603.690300000002
+      },
+      "recallAt5": 1,
+      "ndcgAt5": 0.9375
+    }
+  ],
+  "gpu": {
+    "available": true,
+    "fp16": true,
+    "description": ""
+  }
+}
