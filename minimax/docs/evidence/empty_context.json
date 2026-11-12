@@ -1,5 +1,5 @@
 {
-  "corpus": "orders-d5a8f8355054",
+  "corpus": "orders-5a53dd09a3f2",
   "result": {
     "task": "Add the optional minTotalCents filter to the existing order report.",
     "seekdb": {
@@ -31,7 +31,7 @@
       ]
     },
     "powercontext": {
-      "scope_id": "scp_5emjf1m2r4d99xxg3bs1awrhag",
+      "scope_id": "scp_3xp8db7psevkdsqzz4hrrbqk9k",
       "status": "empty",
       "checkpoint": null
     }

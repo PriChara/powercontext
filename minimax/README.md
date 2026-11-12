@@ -32,6 +32,14 @@ python sdd.py --corpus $corpus context
 
 脚本用新 corpus 从空状态运行。预期 `context` 返回 `sample/specs/orders.md`、`sample/orders.py`、`sample/test_orders.py` 和各自 SHA-256，恢复的 PowerContext 检查点显示目标测试在基线发生断言失败、回归退出码为 0。脚本将规格副本的位数上限从 9 改到 6，重新导入并检查新内容及摘要，然后恢复原始规格。原始输出在 `run/`，再次执行会使用新的隔离 corpus，无需清空现有记录。
 
+复验本次提交中的 MiniMax 候选代码可直接运行下列命令，预期 4 项功能测试和 3 项回归测试全部通过。基线和候选使用同一份 `sample/test_orders.py`。复验已归档代码无需另开模型会话。
+
+```powershell
+python sdd.py --candidate docs/evidence/orders.py test
+```
+
+本次实测的输入、修改前后代码、测试结果和状态记录见 [验证记录](docs/evidence/README.md)。
+
 最后阶段需要真实 MiniMax 账户授权。将 Key 通过本地环境变量 `MINIMAX_API_KEY` 提供给进程。默认使用国内接口及 `MiniMax-M3.1-Flash`，国际账号设置 `MINIMAX_REGION=global`。若套餐支持其他 Anthropic 兼容模型，可设置 `MINIMAX_MODEL`。 [MiniMax 国内接口说明](https://platform.minimax.cn/docs/api-reference/text-anthropic-api)
 
 ```powershell

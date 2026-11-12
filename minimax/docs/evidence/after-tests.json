@@ -1,0 +1,13 @@
+{
+  "command": [
+    "-m",
+    "unittest",
+    "-v",
+    "sample.test_orders"
+  ],
+  "module": "run\\orders.py",
+  "sha256": "ac2792e66e27c0a00c67f03955173978dbfc88f5a4ad229f399fd9ed7486c8d9",
+  "tests_sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc",
+  "exit_code": 0,
+  "output": "test_filter_intersection_and_order (sample.test_orders.Feature.test_filter_intersection_and_order) ... ok\ntest_inclusive_minimum (sample.test_orders.Feature.test_inclusive_minimum) ... ok\ntest_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) ... ok\ntest_zero (sample.test_orders.Feature.test_zero) ... ok\ntest_no_mutation (sample.test_orders.Regression.test_no_mutation) ... ok\ntest_original_customer_status (sample.test_orders.Regression.test_original_customer_status) ... ok\ntest_unfiltered (sample.test_orders.Regression.test_unfiltered) ... ok\n\n----------------------------------------------------------------------\nRan 7 tests in 0.000s\n\nOK\n"
+}

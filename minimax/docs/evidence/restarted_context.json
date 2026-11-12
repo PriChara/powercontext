@@ -1,5 +1,5 @@
 {
-  "corpus": "orders-d5a8f8355054",
+  "corpus": "orders-5a53dd09a3f2",
   "result": {
     "task": "Add the optional minTotalCents filter to the existing order report.",
     "seekdb": {
@@ -31,7 +31,7 @@
       ]
     },
     "powercontext": {
-      "scope_id": "scp_5emjf1m2r4d99xxg3bs1awrhag",
+      "scope_id": "scp_3xp8db7psevkdsqzz4hrrbqk9k",
       "status": "ready",
       "checkpoint": {
         "state": {
@@ -57,8 +57,8 @@
             "artifact_id": "memory",
             "revision": 1
           },
-          "entry_id": "mem_ent_27a33dd15fa549e8aafb1c60658d82c3",
-          "entry_version_id": "mem_ver_5ac8eea53991423287f8418c301253d9"
+          "entry_id": "mem_ent_3ffe2ada504c401d91103951363b76d2",
+          "entry_version_id": "mem_ver_2f69ed80af1d4d5084eea7e653a69659"
         }
       }
     }
