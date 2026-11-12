@@ -42,3 +42,16 @@ python sdd.py --corpus $corpus context
 ```
 
 生成阶段向 MiniMax 提供真实检索结果和上次运行保存的测试状态，保存返回的候选、请求 ID、模型、用量和候选摘要。验证阶段核对原始基线与测试摘要，在候选上运行相同测试，成功后产生 `orders.patch`、`after-tests.json` 并记录第二个任务检查点。凭据由进程环境传入。原始模型思维链不会保存。
+
+### 使用 MiniMax Code 网页版
+
+也可使用有模型额度的 [MiniMax Code 网页版](https://agent.minimax.cn/)。完成基线验证后执行 `python sdd.py --corpus $corpus prepare-web`。把 `run/minimax-prompt.txt` 的全文发到新的 MiniMax Code 任务中。保存界面显示的模型名称和会话证据，把最终答复中的完整代码另存为 UTF-8 的 `run/web-answer.txt`。
+
+```powershell
+python sdd.py --corpus $corpus --candidate run/web-answer.txt --observed-model '界面实际显示的模型名称' import-web
+# 审阅 run/orders.py 后，再执行相同测试。
+python sdd.py --corpus $corpus verify
+python sdd.py --corpus $corpus context
+```
+
+网页接入记录使用界面显示的模型名称、请求内容和答复摘要。保留实际会话或截图供核对，避免在截图里包含账号资料。网页版不提供 API 请求 ID 或用量时，这些字段留空。
