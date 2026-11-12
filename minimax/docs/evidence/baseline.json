@@ -1,0 +1,67 @@
+{
+  "corpus": "orders-d5a8f8355054",
+  "result": {
+    "feature": {
+      "command": [
+        "-m",
+        "unittest",
+        "-v",
+        "sample.test_orders.Feature"
+      ],
+      "module": "sample\\orders.py",
+      "sha256": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807",
+      "tests_sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc",
+      "exit_code": 1,
+      "output": "test_filter_intersection_and_order (sample.test_orders.Feature.test_filter_intersection_and_order) ... FAIL\ntest_inclusive_minimum (sample.test_orders.Feature.test_inclusive_minimum) ... FAIL\ntest_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) ... \n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='-1') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='+1') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='1.5') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='１２') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='1000000000') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=' 10') ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=10) ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=None) ... FAIL\n  test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=True) ... FAIL\ntest_zero (sample.test_orders.Feature.test_zero) ... ok\n\n======================================================================\nFAIL: test_filter_intersection_and_order (sample.test_orders.Feature.test_filter_intersection_and_order)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 34, in test_filter_intersection_and_order\n    self.assertEqual(ids({'customer': 'Alex', 'status': 'paid', 'minTotalCents': '250'}), ['A', 'E'])\nAssertionError: Lists differ: ['A', 'B', 'E', 'F'] != ['A', 'E']\n\nFirst differing element 1:\n'B'\n'E'\n\nFirst list contains 2 additional elements.\nFirst extra element 2:\n'E'\n\n- ['A', 'B', 'E', 'F']\n+ ['A', 'E']\n\n======================================================================\nFAIL: test_inclusive_minimum (sample.test_orders.Feature.test_inclusive_minimum)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 31, in test_inclusive_minimum\n    self.assertEqual(ids({'minTotalCents': '0250'}), ['A', 'C', 'D', 'E'])\nAssertionError: Lists differ: ['A', 'B', 'C', 'D', 'E', 'F'] != ['A', 'C', 'D', 'E']\n\nFirst differing element 1:\n'B'\n'C'\n\nFirst list contains 2 additional elements.\nFirst extra element 4:\n'E'\n\n- ['A', 'B', 'C', 'D', 'E', 'F']\n?       -----             -----\n\n+ ['A', 'C', 'D', 'E']\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='-1')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='+1')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='1.5')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='１２')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value='1000000000')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=' 10')\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=10)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=None)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n======================================================================\nFAIL: test_invalid_values_even_when_no_orders (sample.test_orders.Feature.test_invalid_values_even_when_no_orders) (value=True)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"D:\\oceanbase\\minimax-worktree\\minimax\\sample\\test_orders.py\", line 41, in test_invalid_values_even_when_no_orders\n    with self.subTest(value=value), self.assertRaises(ValueError):\nAssertionError: ValueError not raised\n\n----------------------------------------------------------------------\nRan 4 tests in 0.002s\n\nFAILED (failures=12)\n"
+    },
+    "regression": {
+      "command": [
+        "-m",
+        "unittest",
+        "-v",
+        "sample.test_orders.Regression"
+      ],
+      "module": "sample\\orders.py",
+      "sha256": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807",
+      "tests_sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc",
+      "exit_code": 0,
+      "output": "test_no_mutation (sample.test_orders.Regression.test_no_mutation) ... ok\ntest_original_customer_status (sample.test_orders.Regression.test_original_customer_status) ... ok\ntest_unfiltered (sample.test_orders.Regression.test_unfiltered) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.000s\n\nOK\n"
+    },
+    "powercontext_write": {
+      "entry": {
+        "citation": {
+          "memory_ref": {
+            "family": "memory",
+            "artifact_id": "memory",
+            "revision": 1
+          },
+          "entry_id": "mem_ent_27a33dd15fa549e8aafb1c60658d82c3",
+          "entry_version_id": "mem_ver_5ac8eea53991423287f8418c301253d9"
+        },
+        "version": 1,
+        "kind": "decision",
+        "text": "sddcheckpoint {\"sequence\": 1, \"completed\": [\"Confirmed the feature assertions fail on baseline\", \"Existing regression passed\"], \"pending\": [\"Implement the order minimum filter\", \"Run unchanged feature and regression suites\"], \"verification\": {\"feature_exit\": 1, \"regression_exit\": 0, \"baseline_sha256\": \"b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807\", \"tests_sha256\": \"d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc\"}}",
+        "state": "active",
+        "source_refs": [],
+        "artifact_refs": []
+      },
+      "state": {
+        "sequence": 1,
+        "completed": [
+          "Confirmed the feature assertions fail on baseline",
+          "Existing regression passed"
+        ],
+        "pending": [
+          "Implement the order minimum filter",
+          "Run unchanged feature and regression suites"
+        ],
+        "verification": {
+          "feature_exit": 1,
+          "regression_exit": 0,
+          "baseline_sha256": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807",
+          "tests_sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc"
+        }
+      }
+    }
+  }
+}

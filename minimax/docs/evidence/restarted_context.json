@@ -1,0 +1,66 @@
+{
+  "corpus": "orders-d5a8f8355054",
+  "result": {
+    "task": "Add the optional minTotalCents filter to the existing order report.",
+    "seekdb": {
+      "engine": "5.7.25-OceanBase seekdb-v1.4.0.0",
+      "table": "sdd_minimax_material_v1",
+      "query": "order report minimum total filter list_orders minTotalCents",
+      "materials": [
+        {
+          "source": "sample/specs/orders.md",
+          "kind": "spec",
+          "revision": "3ce6b967c65974b9db8a946e81a29d835023f8d06d75f7703435c7358cdf6707",
+          "body": "# ORD-17 · Order report minimum total filter\n\n`list_orders(orders, filters)` must support optional `minTotalCents`. Its value is a string of 1–9 ASCII decimal digits. Reject empty, signed, decimal, non-ASCII, numeric and null values with `ValueError`, even for an empty orders list. Leading zeros are valid. Include an order when `order['total_cents']` is greater than or equal to the parsed minimum.\n\nWithout `minTotalCents`, preserve current behavior. Combine the minimum with existing exact `customer` and `status` filters using AND. Preserve input ordering and never mutate the input orders or filters. Implement only in `sample/orders.py`; keep `sample/test_orders.py` unchanged.\n",
+          "score": 1.0178540357285517
+        },
+        {
+          "source": "sample/orders.py",
+          "kind": "code",
+          "revision": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807",
+          "body": "\"\"\"Small order-report service. Prices are stored in integer cents.\"\"\"\n\n\ndef list_orders(orders, filters):\n    \"\"\"Return matching orders in input order without mutating them.\"\"\"\n    customer = filters.get('customer')\n    status = filters.get('status')\n    return [\n        order for order in orders\n        if (customer is None or order['customer'] == customer)\n        and (status is None or order['status'] == status)\n    ]\n",
+          "score": 0.7971067278516155
+        },
+        {
+          "source": "sample/test_orders.py",
+          "kind": "test",
+          "revision": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc",
+          "body": "\"\"\"Run the same suite against either the baseline or candidate module.\"\"\"\n\nimport importlib.util\nimport os\nfrom pathlib import Path\nimport unittest\n\n\nmodule_path = Path(os.environ.get('ORDERS_MODULE', Path(__file__).with_name('orders.py')))\nspec = importlib.util.spec_from_file_location('orders_under_test', module_path)\norders_module = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(orders_module)\nlist_orders = orders_module.list_orders\n\nORDERS = [\n    {'id': 'A', 'customer': 'Alex', 'status': 'paid', 'total_cents': 250},\n    {'id': 'B', 'customer': 'Alex', 'status': 'paid', 'total_cents': 125},\n    {'id': 'C', 'customer': 'Kim', 'status': 'paid', 'total_cents': 250},\n    {'id': 'D', 'customer': 'Alex', 'status': 'open', 'total_cents': 400},\n    {'id': 'E', 'customer': 'Alex', 'status': 'paid', 'total_cents': 300},\n    {'id': 'F', 'customer': 'Alex', 'status': 'paid', 'total_cents': 0},\n]\n\n\ndef ids(filters):\n    return [o['id'] for o in list_orders(ORDERS, filters)]\n\n\nclass Feature(unittest.TestCase):\n    def test_inclusive_minimum(self):\n        self.assertEqual(ids({'minTotalCents': '0250'}), ['A', 'C', 'D', 'E'])\n\n    def test_filter_intersection_and_order(self):\n        self.assertEqual(ids({'customer': 'Alex', 'status': 'paid', 'minTotalCents': '250'}), ['A', 'E'])\n\n    def test_zero(self):\n        self.assertEqual(ids({'minTotalCents': '0'}), ['A', 'B', 'C', 'D', 'E', 'F'])\n\n    def test_invalid_values_even_when_no_orders(self):\n        for value in ('', '-1', '+1', '1.5', '１２', '1000000000', ' 10', 10, None, True):\n            with self.subTest(value=value), self.assertRaises(ValueError):\n                list_orders([], {'minTotalCents': value})\n\n\nclass Regression(unittest.TestCase):\n    def test_unfiltered(self):\n        self.assertEqual(ids({}), ['A', 'B', 'C', 'D', 'E', 'F'])\n\n    def test_original_customer_status(self):\n        self.assertEqual(ids({'customer': 'Alex', 'status': 'paid'}), ['A', 'B', 'E', 'F'])\n\n    def test_no_mutation(self):\n        filters = {'status': 'open'}\n        snapshot = [order.copy() for order in ORDERS]\n        self.assertEqual(ids(filters), ['D'])\n        self.assertEqual(ORDERS, snapshot)\n        self.assertEqual(filters, {'status': 'open'})\n",
+          "score": 0.6720863893878736
+        }
+      ]
+    },
+    "powercontext": {
+      "scope_id": "scp_5emjf1m2r4d99xxg3bs1awrhag",
+      "status": "ready",
+      "checkpoint": {
+        "state": {
+          "sequence": 1,
+          "completed": [
+            "Confirmed the feature assertions fail on baseline",
+            "Existing regression passed"
+          ],
+          "pending": [
+            "Implement the order minimum filter",
+            "Run unchanged feature and regression suites"
+          ],
+          "verification": {
+            "feature_exit": 1,
+            "regression_exit": 0,
+            "baseline_sha256": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807",
+            "tests_sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc"
+          }
+        },
+        "citation": {
+          "memory_ref": {
+            "family": "memory",
+            "artifact_id": "memory",
+            "revision": 1
+          },
+          "entry_id": "mem_ent_27a33dd15fa549e8aafb1c60658d82c3",
+          "entry_version_id": "mem_ver_5ac8eea53991423287f8418c301253d9"
+        }
+      }
+    }
+  }
+}

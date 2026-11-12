@@ -1,0 +1,25 @@
+{
+  "corpus": "orders-d5a8f8355054",
+  "result": [
+    {
+      "source": "sample/specs/archive.md",
+      "kind": "spec",
+      "sha256": "d4f872a9b7e0f0b0fac9437df4aeac5e841d5df0a95ff5bf63cda76d4b43641b"
+    },
+    {
+      "source": "sample/specs/orders.md",
+      "kind": "spec",
+      "sha256": "3ce6b967c65974b9db8a946e81a29d835023f8d06d75f7703435c7358cdf6707"
+    },
+    {
+      "source": "sample/orders.py",
+      "kind": "code",
+      "sha256": "b557d515b81c70386f3231eb4c76561154ab29e1f8f1de266f75d85f04be6807"
+    },
+    {
+      "source": "sample/test_orders.py",
+      "kind": "test",
+      "sha256": "d61133dc3c82e05b0be9ead4487706f5786754caffa2550135fcee5405000bbc"
+    }
+  ]
+}
